@@ -4,10 +4,13 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BrainCircuit, FileText, Printer } from "lucide-react";
-import { use, useState } from 'react'; // Import the 'use' hook and useState
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { BrainCircuit, FileText, Printer, Terminal } from "lucide-react";
+import { use, useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { analyzeEmergencyCase, type EmergencyCaseAnalysis, type EmergencyCaseInput } from "@/ai/flows/emergency-flow";
+import { toast } from "sonner";
+import { Alert, AlertTitle, AlertDescription as UiAlertDescription } from "@/components/ui/alert"; // Renamed to avoid conflict
 
 interface HealthReportData {
   patientInfo: {
@@ -41,15 +44,13 @@ function HealthReportDialog({ reportData, open, onOpenChange }: { reportData: He
     if (printableContent) {
       const printWindow = window.open('', '_blank');
       printWindow?.document.write('<html><head><title>Formulaire de Santé</title>');
-      // You might want to link your globals.css or a specific print stylesheet
-      printWindow?.document.write('<link rel="stylesheet" href="/globals.css" type="text/css" media="print"/>'); // Adjust path if needed
+      printWindow?.document.write('<link rel="stylesheet" href="/globals.css" type="text/css" media="print"/>'); 
       printWindow?.document.write('<style>@media print { body { margin: 20px; font-family: sans-serif; } .no-print { display: none; } }</style>');
       printWindow?.document.write('</head><body>');
       printWindow?.document.write(printableContent.innerHTML);
       printWindow?.document.write('</body></html>');
       printWindow?.document.close();
       printWindow?.focus();
-      // Timeout to ensure content is loaded before printing
       setTimeout(() => {
         printWindow?.print();
         printWindow?.close();
@@ -130,11 +131,63 @@ function HealthReportDialog({ reportData, open, onOpenChange }: { reportData: He
   );
 }
 
+function AiAnalysisDialog({ analysis, error, open, onOpenChange }: { analysis: EmergencyCaseAnalysis | null, error: string | null, open: boolean, onOpenChange: (open: boolean) => void }) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Analyse IA de l'Urgence</DialogTitle>
+          <DialogDescription>
+            Résultat de l'analyse par l'intelligence artificielle.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-4 space-y-3">
+          {error && (
+            <Alert variant="destructive">
+              <Terminal className="h-4 w-4" />
+              <AlertTitle>Erreur d'Analyse</AlertTitle>
+              <UiAlertDescription>{error}</UiAlertDescription>
+            </Alert>
+          )}
+          {analysis && (
+            <div className="p-4 border rounded-lg bg-muted/50 text-sm">
+              <p><strong>Priorité :</strong> <span className={
+                analysis.priority === "Élevée" ? "text-destructive font-bold" : 
+                analysis.priority === "Moyenne" ? "text-yellow-600 font-bold" : 
+                analysis.priority === "Faible" ? "text-green-600 font-bold" : ""
+              }>{analysis.priority}</span></p>
+              <p><strong>Justification :</strong> {analysis.reasoning}</p>
+              <div>
+                <strong>Actions Recommandées :</strong>
+                <ul className="list-disc list-inside space-y-1">
+                  {analysis.recommendedActions.map((action, index) => (
+                    <li key={index}>{action}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+          {!analysis && !error && <p className="text-muted-foreground">Aucune analyse disponible.</p>}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Fermer</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
 export default function PatientDetailPage({ params: paramsProp }: { params: { id: string } }) {
   const resolvedParams = use(paramsProp);
   const patientId = resolvedParams.id;
+
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
+  const [isAiAnalysisDialogOpen, setIsAiAnalysisDialogOpen] = useState(false);
+  const [isAnalyzingPatientEmergency, setIsAnalyzingPatientEmergency] = useState(false);
+  const [patientEmergencyAnalysis, setPatientEmergencyAnalysis] = useState<EmergencyCaseAnalysis | null>(null);
+  const [patientEmergencyError, setPatientEmergencyError] = useState<string | null>(null);
+
 
   // Données factices pour la démonstration - A remplacer par des données réelles de Firestore
   const patientData = {
@@ -144,7 +197,7 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
     adresse: "123 Rue de l'Exemple, Ville",
     telephone: "0123456789",
     email: `patient${patientId}@example.com`,
-    symptomesActuels: "Fièvre légère, toux sèche depuis 2 jours.",
+    symptomesActuels: "Fièvre légère, toux sèche depuis 2 jours, difficulté respiratoire modérée.",
     resultatsMedicaux: "Prise de sang en attente. Radio pulmonaire normale.",
     historiqueMedical: [
       { date: "2022-05-10", motif: "Consultation annuelle", diagnostic: "Bon état général" },
@@ -178,8 +231,35 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
   };
 
 
-  const handleEmergencyAI = () => {
-    alert(`Déclenchement de l'IA d'urgence pour le patient ${patientData.nom} avec symptômes : ${patientData.symptomesActuels}`);
+  const handleEmergencyAI = async () => {
+    if (!patientData.symptomesActuels || patientData.symptomesActuels.length < 10) {
+      toast.error("Description des symptômes insuffisante pour une analyse IA.", {
+        description: "Veuillez vous assurer que les symptômes actuels sont bien renseignés (min. 10 caractères)."
+      });
+      setPatientEmergencyError("Description des symptômes insuffisante (min. 10 caractères).");
+      setPatientEmergencyAnalysis(null);
+      setIsAiAnalysisDialogOpen(true);
+      return;
+    }
+
+    setIsAnalyzingPatientEmergency(true);
+    setPatientEmergencyAnalysis(null);
+    setPatientEmergencyError(null);
+    setIsAiAnalysisDialogOpen(true); // Open dialog to show loading/result
+
+    try {
+      toast.info("Analyse IA de l'urgence en cours...");
+      const result = await analyzeEmergencyCase({ description: patientData.symptomesActuels });
+      setPatientEmergencyAnalysis(result);
+      toast.success("Analyse IA terminée avec succès.");
+    } catch (error: any) {
+      console.error("Error analyzing patient emergency case:", error);
+      const errorMessage = error.message || "Une erreur inconnue est survenue lors de l'analyse IA.";
+      setPatientEmergencyError(`Erreur d'analyse IA : ${errorMessage}`);
+      toast.error("Erreur lors de l'analyse IA.", { description: errorMessage });
+    } finally {
+      setIsAnalyzingPatientEmergency(false);
+    }
   };
 
   return (
@@ -191,9 +271,13 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
             <FileText className="mr-2 h-5 w-5" />
             Formulaire de Santé
           </Button>
-          <Button onClick={handleEmergencyAI} variant="destructive">
+          <Button 
+            onClick={handleEmergencyAI} 
+            variant="destructive" 
+            disabled={isAnalyzingPatientEmergency}
+          >
             <BrainCircuit className="mr-2 h-5 w-5" />
-            Évaluer Urgence (IA)
+            {isAnalyzingPatientEmergency ? "Analyse en cours..." : "Évaluer Urgence (IA)"}
           </Button>
         </div>
       </div>
@@ -270,6 +354,15 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
         open={isReportDialogOpen}
         onOpenChange={setIsReportDialogOpen}
       />
+
+      <AiAnalysisDialog
+        analysis={patientEmergencyAnalysis}
+        error={patientEmergencyError}
+        open={isAiAnalysisDialogOpen}
+        onOpenChange={setIsAiAnalysisDialogOpen}
+      />
     </div>
   );
 }
+
+
