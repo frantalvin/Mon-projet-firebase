@@ -52,7 +52,7 @@ export default async function RootLayout({
     messages = await getMessages({ locale }); // Explicitly pass locale
     console.log(`[[RootLayout]] Successfully got messages for locale: ${locale}. Message count: ${messages && Object.keys(messages).length}. First key: ${messages && Object.keys(messages)[0]}`);
     if (messages && Object.keys(messages).length === 0) {
-      console.warn(`[[RootLayout]] getMessages returned an empty object for locale: ${locale}. This might indicate a problem with message loading.`);
+      console.warn(`[[RootLayout]] getMessages returned an empty object for locale: ${locale}. This might indicate a problem with message loading or an empty messages file.`);
     }
   } catch (error: any) {
     console.error(`[[RootLayout]] Error calling getMessages for locale ${locale}:`);
@@ -67,8 +67,7 @@ export default async function RootLayout({
     notFound();
   }
 
-  // This check is important if getMessages could return undefined/null/empty without throwing
-  if (!messages) { // Removed Object.keys().length === 0 here, as an empty messages object can be valid if locale has no messages. getMessages should throw if config not found.
+  if (!messages) { 
     console.error(`[[RootLayout]] Messages are undefined or null for locale: ${locale} after getMessages call. Content:`, messages);
     console.error(`[[RootLayout]] This usually indicates an issue with the root i18n.ts (e.g., it called notFound() itself or getMessages failed catastrophically). Calling notFound().`);
     notFound();
@@ -94,3 +93,4 @@ export default async function RootLayout({
     </html>
   );
 }
+

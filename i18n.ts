@@ -16,34 +16,24 @@ export default getRequestConfig(async ({locale}) => {
     notFound();
   }
 
-  // Using hardcoded messages to test if i18n.ts itself is loaded.
-  if (locale === 'fr') {
-    console.log('[[i18n.ts at ROOT]] Returning hardcoded French messages.');
-    return {
-      messages: {
-        AppLayout: {
-          title: "PatientWise (FR - Hardcoded)",
-          settings: "Paramètres (FR - Hardcoded)",
-          logout: "Déconnexion (FR - Hardcoded)"
-        },
-        Navigation: {
-          dashboard: "Tableau de bord (FR - Hardcoded)",
-          patients: "Patients (FR - Hardcoded)",
-          appointments: "Rendez-vous (FR - Hardcoded)"
-        },
-        ThemeToggle: {
-          toggleTheme: "Changer de thème (FR - Hardcoded)",
-          light: "Clair (FR - Hardcoded)",
-          dark: "Sombre (FR - Hardcoded)",
-          system: "Système (FR - Hardcoded)"
-        },
-        HomePage: {
-          loading: "Chargement... (FR - Hardcoded)"
-        }
-      }
-    };
+  console.log(`[[i18n.ts at ROOT]] Attempting to load messages for locale: ${locale} from ./messages/${locale}.json`);
+  try {
+    // Ensure the path is relative to the project root, as i18n.ts is at the root.
+    const messages = (await import(`./messages/${locale}.json`)).default;
+    console.log(`[[i18n.ts at ROOT]] Successfully loaded messages for ${locale}. Message count: ${messages ? Object.keys(messages).length : 'N/A (messages is null/undefined)'}`);
+    if (!messages || Object.keys(messages).length === 0) {
+      console.warn(`[[i18n.ts at ROOT]] Messages object for locale ${locale} is empty or undefined after import.`);
+      // Depending on strictness, you might want to call notFound() here too
+      // if empty messages are considered an error.
+    }
+    return { messages };
+  } catch (error: any) {
+    console.error(`[[i18n.ts at ROOT]] Failed to load messages for locale ${locale} from ./messages/${locale}.json:`);
+    console.error("Error Name:", error.name);
+    console.error("Error Message:", error.message);
+    console.error("Error Stack:", error.stack);
+    // This is a critical failure, so we call notFound().
+    notFound();
   }
-
-  console.error(`[[i18n.ts at ROOT]] Locale not 'fr', but no other hardcoded messages available. Locale: ${locale}. Triggering notFound().`);
-  notFound();
 });
+
