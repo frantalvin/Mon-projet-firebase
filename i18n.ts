@@ -1,9 +1,36 @@
 import {notFound} from 'next/navigation';
 import {getRequestConfig} from 'next-intl/server';
-import frMessages from './messages/fr.json'; // Direct static import
 
 // Configurez les langues que vous souhaitez prendre en charge
 const locales = ['fr'];
+
+console.log(`[[i18n.ts at ROOT]] File loaded and parsed. TOP LEVEL. Supported locales: ${locales.join(', ')}`);
+
+// Messages français codés en dur pour le diagnostic
+const hardcodedFrMessages = {
+  AppLayout: {
+    title: "PatientWise (FR-HC)", // HC for Hardcoded
+    settings: "Paramètres (FR-HC)",
+    logout: "Déconnexion (FR-HC)"
+  },
+  Navigation: {
+    dashboard: "Tableau de Bord (FR-HC)",
+    patients: "Patients (FR-HC)",
+    appointments: "Rendez-vous (FR-HC)"
+  },
+  ThemeToggle: {
+    toggleTheme: "Changer de thème (FR-HC)",
+    light: "Clair (FR-HC)",
+    dark: "Sombre (FR-HC)",
+    system: "Système (FR-HC)"
+  },
+  DashboardPage: { // Adding some keys for dashboard page as well
+    loading: "Chargement... (FR-HC)",
+    totalPatientsTitle: "Total Patients (FR-HC)",
+  }
+};
+
+console.log(`[[i18n.ts at ROOT]] Hardcoded frMessages defined. Keys: ${Object.keys(hardcodedFrMessages).length}`);
 
 export default getRequestConfig(async ({locale}) => {
   console.log(`[[i18n.ts at ROOT]] getRequestConfig CALLED for locale: ${locale}`);
@@ -14,12 +41,8 @@ export default getRequestConfig(async ({locale}) => {
     notFound();
   }
 
-  // Fournir les messages pour 'fr' directement
-  console.log(`[[i18n.ts at ROOT]] Providing messages for 'fr' locale directly via static import.`);
+  console.log(`[[i18n.ts at ROOT]] Providing hardcoded messages for 'fr' locale.`);
   return {
-    messages: frMessages
+    messages: hardcodedFrMessages
   };
 });
-
-console.log(`[[i18n.ts at ROOT]] File loaded and parsed. TOP LEVEL. Supported locales: ${locales.join(', ')}`);
-console.log(`[[i18n.ts at ROOT]] frMessages loaded: ${frMessages ? Object.keys(frMessages).length + ' keys' : 'NOT LOADED'}`);

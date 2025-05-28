@@ -19,11 +19,11 @@
         "name": "next"
       }
     ],
-    "baseUrl": ".", // Added this line
+    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "i18n.ts", "middleware.ts"],
   "exclude": ["node_modules"]
 }
