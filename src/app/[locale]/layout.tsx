@@ -2,11 +2,12 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import '../globals.css'; // Adjusted path
-import { AppProvider } from '@/contexts/app-context';
-import { Toaster } from "@/components/ui/toaster";
-import { ThemeProvider } from "@/components/theme-provider";
+import { AppProvider } from '@/contexts/app-context'; // Restored
+import { Toaster } from "@/components/ui/toaster"; // Restored
+import { ThemeProvider } from "@/components/theme-provider"; // Restored
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
+import { notFound } from 'next/navigation';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -30,19 +31,44 @@ interface RootLayoutProps {
   };
 }
 
+const supportedLocales = ['en', 'fr'];
+
 export default async function RootLayout({
   children,
-  params,
+  params: { locale }, // Destructure locale directly
 }: Readonly<RootLayoutProps>) {
-  // Explicitly pass the locale from params to getMessages
-  // and ensure params is awaited if it's a promise (though Next.js usually resolves it)
-  const resolvedParams = await params;
-  const messages = await getMessages({ locale: resolvedParams.locale });
+
+  console.log(`[RootLayout] Rendering for locale: ${locale}`);
+
+  if (!supportedLocales.includes(locale)) {
+    console.error(`[RootLayout] Invalid locale detected: ${locale}. Calling notFound().`);
+    notFound();
+  }
+
+  let messages;
+  try {
+    console.log(`[RootLayout] Attempting to get messages for locale: ${locale} using getMessages({ locale })`);
+    messages = await getMessages({ locale }); // Explicitly pass locale
+    console.log(`[RootLayout] Successfully got messages for locale: ${locale}. Message count: ${messages && Object.keys(messages).length}`);
+  } catch (error) {
+    console.error(`[RootLayout] Error calling getMessages for locale ${locale}:`, error);
+    if ((error as Error).message.includes("Couldn't find next-intl config file")) {
+        console.error("[RootLayout] CRITICAL: next-intl config file (i18n.ts at root or src/i18n.ts) not found by next-intl/server. Check build/runtime path resolution.");
+    }
+    notFound();
+  }
+
+  if (!messages || Object.keys(messages).length === 0) {
+    // This case handles if getMessages returns undefined, null, or empty object without throwing an error.
+    console.error(`[RootLayout] Messages are undefined, null, or empty for locale: ${locale} after getMessages call. Content:`, messages);
+    console.error(`[RootLayout] This might indicate an issue with i18n.ts or the message files for locale: ${locale}. Calling notFound().`);
+    notFound();
+  }
 
   return (
-    <html lang={resolvedParams.locale} suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased font-sans`}>
-        <NextIntlClientProvider locale={resolvedParams.locale} messages={messages}>
+        <NextIntlClientProvider locale={locale} messages={messages}>
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
