@@ -1,0 +1,26 @@
+{
+  "AppLayout": {
+    "title": "PatientWise",
+    "settings": "Paramètres",
+    "logout": "Déconnexion"
+  },
+  "Navigation": {
+    "dashboard": "Tableau de bord",
+    "patients": "Patients",
+    "appointments": "Rendez-vous"
+  },
+  "ThemeToggle": {
+    "toggleTheme": "Changer de thème",
+    "light": "Clair",
+    "dark": "Sombre",
+    "system": "Système"
+  },
+  "LanguageSwitcher": {
+    "changeLanguage": "Changer de langue",
+    "english": "English",
+    "french": "Français"
+  },
+  "HomePage": {
+    "loading": "Chargement..."
+  }
+}
