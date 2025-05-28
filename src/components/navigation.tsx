@@ -6,8 +6,8 @@ import {
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
 import { LayoutDashboard, UsersRound, CalendarDays } from "lucide-react";
-import Link from "next-intl/link"; // Utiliser Link de next-intl
-import { usePathname } from "next-intl/client"; // Utiliser usePathname de next-intl
+import Link from "next-intl/navigation"; // CORRECTED: Link is from next-intl/navigation
+import { usePathname } from "next-intl/navigation"; // CORRECTED: usePathname is from next-intl/navigation
 import { useTranslations } from "next-intl";
 
 export function Navigation() {
@@ -23,11 +23,7 @@ export function Navigation() {
   return (
     <SidebarMenu>
       {navItems.map((item) => {
-        const label = t(item.labelKey as any); // any pour simplifier, idéalement typer les clés
-        // isActive: vérifier si le pathname commence par le href de l'item.
-        // Pour /dashboard, il sera actif si pathname est /fr/dashboard (ou /en/dashboard etc.)
-        // Pour les autres, c'est similaire.
-        // next-intl/link gère le préfixe de la locale.
+        const label = t(item.labelKey as any);
         const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
         
         return (

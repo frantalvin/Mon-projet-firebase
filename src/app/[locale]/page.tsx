@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from 'react';
-import { useRouter } from 'next-intl/client'; // Utiliser useRouter de next-intl
+import { useRouter } from 'next-intl/navigation'; // CORRECTED: useRouter is from next-intl/navigation
 import { useLocale } from 'next-intl';
 
 export default function HomePage() {
@@ -9,7 +9,7 @@ export default function HomePage() {
   const locale = useLocale();
 
   useEffect(() => {
-    // Rediriger vers /{locale}/dashboard
+    // Redirect to /{locale}/dashboard
     router.replace(`/${locale}/dashboard`);
   }, [router, locale]);
 
