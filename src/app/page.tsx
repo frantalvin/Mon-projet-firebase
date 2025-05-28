@@ -47,7 +47,7 @@ export default function HomePage() {
         case 'auth/wrong-password':
           setError("Mot de passe incorrect.");
           break;
-        case 'auth/invalid-credential': // Ajout de ce cas
+        case 'auth/invalid-credential':
           setError("L'adresse e-mail ou le mot de passe est incorrect.");
           break;
         case 'auth/email-already-in-use':
@@ -68,9 +68,9 @@ export default function HomePage() {
 
   const handleTabChange = (value: string) => {
     setIsSignUp(value === 'signup');
-    setError(null);
-    setEmail('');
-    setPassword('');
+    setError(null); // Clear error on tab change
+    setEmail(''); // Clear email field
+    setPassword(''); // Clear password field
   };
 
   return (
@@ -194,9 +194,11 @@ export default function HomePage() {
         
       </main>
       <footer className="w-full py-6 text-center">
-        <p className="text-sm text-muted-foreground">
-          © {currentYear !== null ? currentYear : new Date().getFullYear()} PatientWise. Tous droits réservés.
-        </p>
+        {currentYear !== null ? (
+          <p className="text-sm text-muted-foreground">© {currentYear} PatientWise. Tous droits réservés.</p>
+        ) : (
+          <p className="text-sm text-muted-foreground">Chargement de l'année...</p>
+        )}
       </footer>
     </div>
   );
