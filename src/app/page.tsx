@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, type FormEvent, useEffect } from 'react'; // Added useEffect
+import { useState, type FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, type AuthError } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -47,6 +47,9 @@ export default function HomePage() {
         case 'auth/wrong-password':
           setError("Mot de passe incorrect.");
           break;
+        case 'auth/invalid-credential': // Ajout de ce cas
+          setError("L'adresse e-mail ou le mot de passe est incorrect.");
+          break;
         case 'auth/email-already-in-use':
           setError("Cet e-mail est déjà utilisé pour un autre compte.");
           break;
@@ -54,13 +57,20 @@ export default function HomePage() {
           setError("Le mot de passe doit contenir au moins 6 caractères.");
           break;
         default:
-          setError(authError.message || "Une erreur est survenue.");
+          setError(authError.message || "Une erreur est survenue lors de l'authentification.");
           break;
       }
       console.error("Firebase Auth Error:", authError);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleTabChange = (value: string) => {
+    setIsSignUp(value === 'signup');
+    setError(null);
+    setEmail('');
+    setPassword('');
   };
 
   return (
@@ -80,10 +90,10 @@ export default function HomePage() {
           </p>
         </div>
 
-        <Tabs defaultValue="login" className="w-full max-w-md">
+        <Tabs defaultValue="login" onValueChange={handleTabChange} className="w-full max-w-md">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login" onClick={() => { setIsSignUp(false); setError(null); setEmail(''); setPassword(''); }}>Connexion</TabsTrigger>
-            <TabsTrigger value="signup" onClick={() => { setIsSignUp(true); setError(null); setEmail(''); setPassword(''); }}>Inscription</TabsTrigger>
+            <TabsTrigger value="login">Connexion</TabsTrigger>
+            <TabsTrigger value="signup">Inscription</TabsTrigger>
           </TabsList>
           <TabsContent value="login">
             <Card>
@@ -185,7 +195,7 @@ export default function HomePage() {
       </main>
       <footer className="w-full py-6 text-center">
         <p className="text-sm text-muted-foreground">
-          © {currentYear || new Date().getFullYear()} PatientWise. Tous droits réservés.
+          © {currentYear !== null ? currentYear : new Date().getFullYear()} PatientWise. Tous droits réservés.
         </p>
       </footer>
     </div>
