@@ -1,8 +1,8 @@
 
 'use client';
 
-import Link from 'next/link'; // Standard Next.js Link
-import { usePathname, useSearchParams } from 'next/navigation'; // Standard Next.js hooks
+import Link from 'next/link';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -11,16 +11,19 @@ import {
   SheetContent,
   SheetTrigger,
   SheetClose,
+  SheetHeader, // Importer SheetHeader
+  SheetTitle, // Importer SheetTitle
+  SheetFooter // Importer SheetFooter pour la structure
 } from '@/components/ui/sheet';
 import {
-  Sidebar,
-  SidebarHeader,
-  SidebarTitle,
-  SidebarBody,
-  SidebarFooter,
+  Sidebar as AppSidebar,
+  SidebarHeader as AppSidebarHeader,
+  SidebarTitle as AppSidebarTitle,
+  SidebarBody as AppSidebarBody,
+  SidebarFooter as AppSidebarFooter,
   SidebarNav,
   SidebarNavMain,
-  SidebarNavLink, // This component already uses next/link
+  SidebarNavLink,
 } from '@/components/ui/sidebar';
 import { LayoutDashboard, UsersRound, CalendarDays, Menu, LineChart, ShieldCheck, BrainCircuit } from 'lucide-react';
 
@@ -31,8 +34,8 @@ interface NavItem {
 }
 
 export function Navigation() {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const pathname = usePathname(); // Utilise next/navigation
+  const searchParams = useSearchParams(); // Utilise next/navigation
   const activeTab = searchParams.get('tab') || 'dashboard';
 
   const navItems: NavItem[] = [
@@ -44,71 +47,68 @@ export function Navigation() {
   ];
 
   const getHref = (tabQuery: string) => {
+    // En supposant que toutes ces pages sont maintenant des onglets sous /dashboard
     return `/dashboard?tab=${tabQuery}`;
   };
 
   const navContent = (isSheet = false) => (
-    <>
-      <SidebarNav>
-        <SidebarNavMain>
-          {navItems.map((item) => {
-            const href = getHref(item.query);
-            const isActive = activeTab === item.query;
+    <SidebarNav>
+      <SidebarNavMain>
+        {navItems.map((item) => {
+          const href = getHref(item.query);
+          const isActive = activeTab === item.query;
 
-            if (isSheet) { // Mobile Sheet
-              return (
-                <SheetClose asChild key={item.query}>
-                  <Link
-                    href={href}
-                    className={cn(
-                      'flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground',
-                      isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
-                    )}
-                  >
-                    <item.icon className="w-4 h-4 mr-2" />
-                    {item.label}
-                  </Link>
-                </SheetClose>
-              );
-            } else { // Desktop Sidebar
-              return (
-                <SidebarNavLink // SidebarNavLink IS a Link component.
-                  key={item.query}
+          if (isSheet) {
+            return (
+              <SheetClose asChild key={item.query}>
+                <Link
                   href={href}
-                  active={isActive}
-                  // No asChild needed here, and no inner Link component.
-                  // The className="flex items-center" is already part of SidebarNavLink's definition.
+                  className={cn(
+                    'flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground',
+                    isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                  )}
                 >
                   <item.icon className="w-4 h-4 mr-2" />
                   {item.label}
-                </SidebarNavLink>
-              );
-            }
-          })}
-        </SidebarNavMain>
-      </SidebarNav>
-    </>
+                </Link>
+              </SheetClose>
+            );
+          } else {
+            return (
+              <SidebarNavLink
+                key={item.query}
+                href={href}
+                active={isActive}
+              >
+                <item.icon className="w-4 h-4 mr-2" />
+                {item.label}
+              </SidebarNavLink>
+            );
+          }
+        })}
+      </SidebarNavMain>
+    </SidebarNav>
   );
-  
+
   return (
     <>
       {/* Desktop Sidebar */}
-      <Sidebar className="hidden lg:flex lg:flex-col border-r">
-        <SidebarHeader>
-          <SidebarTitle>PatientWise</SidebarTitle>
-        </SidebarHeader>
+      <AppSidebar className="hidden lg:flex lg:flex-col border-r">
+        <AppSidebarHeader>
+          <AppSidebarTitle>PatientWise</AppSidebarTitle>
+        </AppSidebarHeader>
         <ScrollArea className="flex-grow">
-          <SidebarBody>
-           {navContent(false)}
-          </SidebarBody>
+          <AppSidebarBody>
+            {navContent(false)}
+          </AppSidebarBody>
         </ScrollArea>
-        <SidebarFooter>
+        <AppSidebarFooter>
           {/* Optional: Add footer content like user profile or settings link */}
-        </SidebarFooter>
-      </Sidebar>
+        </AppSidebarFooter>
+      </AppSidebar>
 
       {/* Mobile Sheet Trigger */}
-      <div className="lg:hidden fixed top-3 left-3 z-50"> {/* Adjusted to match AppLayout header height consideration */}
+      <div className="lg:hidden fixed top-3 left-3 z-50">
         <Sheet>
           <SheetTrigger asChild>
             <Button variant="outline" size="icon">
@@ -116,20 +116,20 @@ export function Navigation() {
               <span className="sr-only">Ouvrir le menu</span>
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-[280px] sm:w-[280px] p-0 flex flex-col"> {/* Adjusted width to match desktop */}
-            <Sidebar className="flex flex-col h-full">
-              <SidebarHeader>
-                <SidebarTitle>PatientWise</SidebarTitle>
-              </SidebarHeader>
-              <ScrollArea className="flex-grow">
-                <SidebarBody>
-                  {navContent(true)}
-                </SidebarBody>
-              </ScrollArea>
-               <SidebarFooter>
-                {/* Optional: Add footer content */}
-              </SidebarFooter>
-            </Sidebar>
+          <SheetContent side="left" className="w-[280px] sm:w-[280px] p-0 flex flex-col">
+            {/* Utiliser SheetHeader et SheetTitle de @/components/ui/sheet ici */}
+            <SheetHeader className="p-4 border-b">
+              <SheetTitle>PatientWise</SheetTitle>
+              {/* Vous pouvez ajouter un SheetDescription ici si nécessaire */}
+            </SheetHeader>
+            <ScrollArea className="flex-grow">
+              <div className="p-4"> {/* Ajout d'un padding pour le contenu du menu mobile */}
+                {navContent(true)}
+              </div>
+            </ScrollArea>
+            <SheetFooter className="p-4 border-t">
+              {/* Contenu optionnel pour le pied de page du menu mobile */}
+            </SheetFooter>
           </SheetContent>
         </Sheet>
       </div>
