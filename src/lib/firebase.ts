@@ -1,19 +1,18 @@
+
 // src/lib/firebase.ts
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 
-// TODO: Replace with your actual Firebase project configuration
-// Vous pouvez trouver cette configuration dans votre console Firebase:
-// Paramètres du projet > Général > Vos applications > SDK setup and configuration
+// Configuration Firebase basée sur les informations fournies par l'utilisateur
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID",
-  measurementId: "YOUR_MEASUREMENT_ID" // Optionnel, pour Google Analytics
+  apiKey: "AIzaSyBqWYuoOKfn_iJVPaw2faKhoTubsSuUT2E",
+  authDomain: "mon-atta.firebaseapp.com", // Construit à partir de projectId
+  projectId: "mon-atta",
+  storageBucket: "mon-atta.firebasestorage.app",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // Veuillez vérifier cette valeur dans votre console Firebase (Paramètres du projet > Général)
+  appId: "1:912302999620:android:64cd0f3add2858b3dd9411", // Basé sur mobilesdk_app_id fourni. Pour une application web, un App ID Web dédié est généralement utilisé.
+  measurementId: "YOUR_MEASUREMENT_ID" // Optionnel, pour Google Analytics. Vérifiez dans votre console Firebase si nécessaire.
 };
 
 let app: FirebaseApp;
