@@ -2,9 +2,9 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import '../globals.css'; // Adjusted path
-import { AppProvider } from '@/contexts/app-context'; // Restored
-import { Toaster } from "@/components/ui/toaster"; // Restored
-import { ThemeProvider } from "@/components/theme-provider"; // Restored
+import { AppProvider } from '@/contexts/app-context'; 
+import { Toaster } from "@/components/ui/toaster"; 
+import { ThemeProvider } from "@/components/theme-provider"; 
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { notFound } from 'next/navigation';
@@ -31,7 +31,7 @@ interface RootLayoutProps {
   };
 }
 
-const supportedLocales = ['en', 'fr'];
+const supportedLocales = ['fr'];
 
 export default async function RootLayout({
   children,

@@ -15,7 +15,7 @@ import { Navigation } from "@/components/navigation";
 // import { Settings, LogOut } from "lucide-react"; // Commented out as not used
 import React from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { LanguageSwitcher } from "@/components/language-switcher";
+// import { LanguageSwitcher } from "@/components/language-switcher"; // Removed as only French is supported
 import { useTranslations } from 'next-intl';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -49,7 +49,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <h1 className="text-2xl font-semibold">{t('title')}</h1>
           </div>
           <div className="flex items-center gap-2">
-            <LanguageSwitcher />
+            {/* <LanguageSwitcher /> // Removed as only French is supported */}
             <ThemeToggle />
           </div>
         </header>

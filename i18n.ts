@@ -3,7 +3,7 @@ import {notFound} from 'next/navigation';
 import {getRequestConfig} from 'next-intl/server';
 
 // A list of all locales that are supported
-const locales = ['en', 'fr'];
+const locales = ['fr'];
 
 console.log('[i18n.ts at ROOT] File loaded and parsed.'); // New log
 
