@@ -14,6 +14,7 @@ import { Navigation } from "@/components/navigation";
 import { Button } from "@/components/ui/button";
 import { Settings, LogOut } from "lucide-react";
 import React from "react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -39,9 +40,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </Sidebar>
       <SidebarInset className="p-2 sm:p-4 md:p-6">
         <header className="mb-6 flex items-center justify-between rounded-lg border bg-card p-4 shadow-sm">
-          <SidebarTrigger className="md:hidden" /> {/* Hidden on desktop, shown on mobile to toggle sheet */}
-          <h1 className="text-2xl font-semibold">PatientWise</h1>
-           {/* Placeholder for user profile or actions */}
+          <div className="flex items-center gap-2">
+            <SidebarTrigger className="md:hidden" /> {/* Hidden on desktop, shown on mobile to toggle sheet */}
+            <h1 className="text-2xl font-semibold">PatientWise</h1>
+          </div>
+          <ThemeToggle />
         </header>
         <main>{children}</main>
       </SidebarInset>
