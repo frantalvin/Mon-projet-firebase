@@ -1,8 +1,8 @@
 
 'use client';
 
-import Link from 'next/link'; // Using standard Next.js Link for query param changes
-import { usePathname, useSearchParams } from 'next/navigation';
+import Link from 'next/link'; // Standard Next.js Link
+import { usePathname, useSearchParams } from 'next/navigation'; // Standard Next.js hooks
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -20,9 +20,9 @@ import {
   SidebarFooter,
   SidebarNav,
   SidebarNavMain,
-  SidebarNavLink,
+  SidebarNavLink, // This component already uses next/link
 } from '@/components/ui/sidebar';
-import { LayoutDashboard, UsersRound, CalendarDays, Menu, LineChart, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, UsersRound, CalendarDays, Menu, LineChart, ShieldCheck, BrainCircuit } from 'lucide-react';
 
 interface NavItem {
   query: string;
@@ -31,7 +31,7 @@ interface NavItem {
 }
 
 export function Navigation() {
-  const pathname = usePathname(); // Base path, e.g., /dashboard
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeTab = searchParams.get('tab') || 'dashboard';
 
@@ -39,14 +39,11 @@ export function Navigation() {
     { query: 'dashboard', label: 'Tableau de Bord', icon: LayoutDashboard },
     { query: 'patients', label: 'Patients', icon: UsersRound },
     { query: 'appointments', label: 'Rendez-vous', icon: CalendarDays },
-    { query: 'statistics', label: 'Statistiques', icon: LineChart },
-    { query: 'admin', label: 'Admin', icon: ShieldCheck },
+    // { query: 'statistics', label: 'Statistiques', icon: LineChart }, // Removed as per previous request
+    // { query: 'admin', label: 'Admin', icon: ShieldCheck }, // Removed as per previous request
   ];
 
-  // Helper to construct the href for navigation links
   const getHref = (tabQuery: string) => {
-    // Assuming the base path for the tabbed interface is /dashboard
-    // If it could be other paths, this logic might need adjustment
     return `/dashboard?tab=${tabQuery}`;
   };
 
@@ -57,34 +54,36 @@ export function Navigation() {
           {navItems.map((item) => {
             const href = getHref(item.query);
             const isActive = activeTab === item.query;
-            const NavLinkComponent = isSheet ? SheetClose : 'div'; // SheetClose needs to wrap Link for mobile
 
-            return isSheet ? (
-              <SheetClose asChild key={item.query}>
-                <SidebarNavLink
-                  href={href}
-                  active={isActive}
-                  asChild // Important for SheetClose to work with Link
-                >
-                  <Link href={href} className="flex items-center">
+            if (isSheet) { // Mobile Sheet
+              return (
+                <SheetClose asChild key={item.query}>
+                  <Link
+                    href={href}
+                    className={cn(
+                      'flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground',
+                      isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                    )}
+                  >
                     <item.icon className="w-4 h-4 mr-2" />
                     {item.label}
                   </Link>
-                </SidebarNavLink>
-              </SheetClose>
-            ) : (
-              <SidebarNavLink
-                key={item.query}
-                href={href}
-                active={isActive}
-                asChild
-              >
-                <Link href={href} className="flex items-center">
+                </SheetClose>
+              );
+            } else { // Desktop Sidebar
+              return (
+                <SidebarNavLink // SidebarNavLink IS a Link component.
+                  key={item.query}
+                  href={href}
+                  active={isActive}
+                  // No asChild needed here, and no inner Link component.
+                  // The className="flex items-center" is already part of SidebarNavLink's definition.
+                >
                   <item.icon className="w-4 h-4 mr-2" />
                   {item.label}
-                </Link>
-              </SidebarNavLink>
-            );
+                </SidebarNavLink>
+              );
+            }
           })}
         </SidebarNavMain>
       </SidebarNav>
@@ -100,7 +99,7 @@ export function Navigation() {
         </SidebarHeader>
         <ScrollArea className="flex-grow">
           <SidebarBody>
-           {navContent()}
+           {navContent(false)}
           </SidebarBody>
         </ScrollArea>
         <SidebarFooter>
@@ -109,7 +108,7 @@ export function Navigation() {
       </Sidebar>
 
       {/* Mobile Sheet Trigger */}
-      <div className="lg:hidden fixed top-3 left-3 z-50">
+      <div className="lg:hidden fixed top-3 left-3 z-50"> {/* Adjusted to match AppLayout header height consideration */}
         <Sheet>
           <SheetTrigger asChild>
             <Button variant="outline" size="icon">
@@ -117,7 +116,7 @@ export function Navigation() {
               <span className="sr-only">Ouvrir le menu</span>
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-[300px] sm:w-[300px] p-0 flex flex-col">
+          <SheetContent side="left" className="w-[280px] sm:w-[280px] p-0 flex flex-col"> {/* Adjusted width to match desktop */}
             <Sidebar className="flex flex-col h-full">
               <SidebarHeader>
                 <SidebarTitle>PatientWise</SidebarTitle>
@@ -137,5 +136,3 @@ export function Navigation() {
     </>
   );
 }
-
-    
