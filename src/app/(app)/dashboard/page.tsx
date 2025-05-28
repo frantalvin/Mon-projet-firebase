@@ -16,7 +16,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal, BrainCircuit, Users, CalendarDays, LineChartIcon, Shield, PlusCircle, Eye, Search } from "lucide-react";
 import Link from 'next/link';
 import { db } from "@/lib/firebase";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, Timestamp } from "firebase/firestore";
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -44,8 +44,8 @@ function DashboardTabContent() {
 
   useEffect(() => {
     // Placeholder data, replace with actual data fetching if needed
-    setActivePatients(125); 
-    setAppointmentsToday(8); 
+    setActivePatients(125);
+    setAppointmentsToday(8);
   }, []);
 
   const handleAnalyzeEmergency = async () => {
@@ -143,7 +143,7 @@ function DashboardTabContent() {
             <BrainCircuit className="mr-2 h-4 w-4" />
             {isAnalyzing ? "Analyse en cours..." : "Analyser l'Urgence"}
           </Button>
-          
+
           {analysisError && (
             <Alert variant="destructive" className="mt-4">
               <Terminal className="h-4 w-4" />
@@ -156,8 +156,8 @@ function DashboardTabContent() {
             <div className="mt-4 p-4 border rounded-lg bg-muted/50">
               <h3 className="text-lg font-semibold">Résultat de l'Analyse IA :</h3>
               <p><strong>Priorité :</strong> <span className={
-                emergencyAnalysis.priority === "Élevée" ? "text-destructive font-bold" : 
-                emergencyAnalysis.priority === "Moyenne" ? "text-yellow-600 font-bold" : 
+                emergencyAnalysis.priority === "Élevée" ? "text-destructive font-bold" :
+                emergencyAnalysis.priority === "Moyenne" ? "text-yellow-600 font-bold" :
                 emergencyAnalysis.priority === "Faible" ? "text-green-600 font-bold" : ""
               }>{emergencyAnalysis.priority}</span></p>
               <p><strong>Justification :</strong> {emergencyAnalysis.reasoning}</p>
@@ -184,7 +184,7 @@ interface PatientData {
   dob: string; // Stored as yyyy-MM-dd string
   phone?: string;
   email?: string;
-  createdAt?: any; // Firestore Timestamp or ServerTimestamp
+  createdAt?: Timestamp; // Firestore Timestamp
 }
 
 function PatientsTabContent() {
@@ -194,23 +194,39 @@ function PatientsTabContent() {
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
+    console.log("[PatientsTabContent] useEffect: Démarrage de la récupération des patients.");
     const fetchPatients = async () => {
       setIsLoading(true);
       setFetchError(null);
       try {
         const patientsCollectionRef = collection(db, "patients");
-        const q = query(patientsCollectionRef, orderBy("createdAt", "desc")); 
+        const q = query(patientsCollectionRef, orderBy("createdAt", "desc"));
+        console.log("[PatientsTabContent] Requête Firestore créée:", q);
         const querySnapshot = await getDocs(q);
+        console.log(`[PatientsTabContent] Snapshot reçu. Nombre de documents: ${querySnapshot.size}`);
+
         const fetchedPatients: PatientData[] = [];
         querySnapshot.forEach((doc) => {
-          fetchedPatients.push({ id: doc.id, ...doc.data() } as PatientData);
+          const data = doc.data();
+          console.log(`[PatientsTabContent] Document ID: ${doc.id}, Données:`, data);
+          fetchedPatients.push({
+            id: doc.id,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            dob: data.dob, // Assurez-vous que 'dob' est bien une chaîne 'yyyy-MM-dd'
+            phone: data.phone,
+            email: data.email,
+            createdAt: data.createdAt // Doit être un Firestore Timestamp
+          } as PatientData);
         });
+        console.log("[PatientsTabContent] Patients récupérés et formatés:", fetchedPatients);
         setPatientsList(fetchedPatients);
       } catch (error: any) {
-        console.error("Erreur lors de la récupération des patients :", error);
-        setFetchError("Impossible de charger la liste des patients. " + (error.message || ""));
+        console.error("[PatientsTabContent] Erreur lors de la récupération des patients :", error);
+        setFetchError(`Impossible de charger la liste des patients. ${error.message || "Erreur inconnue."} Avez-vous vérifié vos règles de sécurité Firestore pour la lecture de la collection 'patients' ?`);
       } finally {
         setIsLoading(false);
+        console.log("[PatientsTabContent] Fin de la récupération des patients.");
       }
     };
 
@@ -218,12 +234,14 @@ function PatientsTabContent() {
   }, []);
 
   const filteredPatients = useMemo(() => {
+    console.log("[PatientsTabContent] useMemo: Recalcul des patients filtrés. Terme de recherche:", searchTerm, "Liste de base:", patientsList);
     if (!searchTerm) {
       return patientsList;
     }
+    const lowercasedSearchTerm = searchTerm.toLowerCase();
     return patientsList.filter(patient =>
-      patient.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      patient.lastName.toLowerCase().includes(searchTerm.toLowerCase())
+      (patient.firstName?.toLowerCase() || '').includes(lowercasedSearchTerm) ||
+      (patient.lastName?.toLowerCase() || '').includes(lowercasedSearchTerm)
     );
   }, [searchTerm, patientsList]);
 
@@ -240,10 +258,6 @@ function PatientsTabContent() {
           <CardTitle>Liste des Patients</CardTitle>
           <CardDescription>
             Visualisez et gérez les dossiers patients. Recherche par nom ou prénom.
-            <br />
-            <span className="text-xs text-muted-foreground">
-              (La recherche par maladie ou symptômes n'est pas encore implémentée.)
-            </span>
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -262,19 +276,28 @@ function PatientsTabContent() {
             </div>
           </div>
 
-          {isLoading && <p className="text-center py-8 text-muted-foreground">Chargement des patients...</p>}
-          {fetchError && (
+          {isLoading && <p className="text-center py-8 text-muted-foreground">Chargement de la liste des patients...</p>}
+          
+          {!isLoading && fetchError && (
             <Alert variant="destructive" className="mt-4">
               <Terminal className="h-4 w-4" />
               <AlertTitle>Erreur de Chargement</AlertTitle>
               <AlertDescription>{fetchError}</AlertDescription>
             </Alert>
           )}
-          {!isLoading && !fetchError && filteredPatients.length === 0 && (
+
+          {!isLoading && !fetchError && patientsList.length === 0 && (
              <p className="text-muted-foreground text-center py-8">
-              {searchTerm ? `Aucun patient trouvé pour "${searchTerm}".` : "Aucun patient enregistré."}
+              Aucun patient enregistré pour le moment. Cliquez sur "Nouveau Patient" pour en ajouter un.
             </p>
           )}
+
+          {!isLoading && !fetchError && patientsList.length > 0 && filteredPatients.length === 0 && searchTerm && (
+             <p className="text-muted-foreground text-center py-8">
+              Aucun patient trouvé pour le terme de recherche "{searchTerm}".
+            </p>
+          )}
+
           {!isLoading && !fetchError && filteredPatients.length > 0 && (
             <ul className="space-y-3">
               {filteredPatients.map((patient) => (
@@ -338,8 +361,8 @@ function AppointmentsTabContent() {
                       <td className="px-6 py-4">{rdv.medecin}</td>
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          rdv.statut === 'Prévu' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' : 
-                          rdv.statut === 'Terminé' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 
+                          rdv.statut === 'Prévu' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' :
+                          rdv.statut === 'Terminé' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' :
                           rdv.statut === 'Annulé' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
                         }`}>
                           {rdv.statut}
@@ -428,7 +451,7 @@ function MainAppPage() {
     statistics: <StatisticsTabContent />,
     admin: <AdminTabContent />,
   };
-  
+
   return (
     <div className="flex flex-col h-full">
       <Tabs defaultValue={currentTab} value={currentTab} className="flex-grow flex flex-col">
@@ -462,7 +485,7 @@ function MainAppPage() {
             </TabsTrigger>
           </TabsList>
         </div>
-        
+
         <div className="flex-grow overflow-y-auto p-1">
           {/* Conditional rendering based on currentTab to ensure only one tab content is active */}
           {currentTab === 'dashboard' && <TabsContent value="dashboard" className="mt-0">{tabContents.dashboard}</TabsContent>}
