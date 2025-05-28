@@ -67,6 +67,12 @@ export default function PatientDetailPage() {
     }
   };
 
+  const getBadgeVariant = (status: Appointment['status']) => {
+    if (status === 'Scheduled') return 'default';
+    if (status === 'Completed') return 'accent';
+    return 'destructive';
+  };
+
 
   if (isAppContextLoading || patient === undefined) {
     return <div className="flex justify-center items-center h-64">Loading patient details...</div>;
@@ -175,10 +181,7 @@ export default function PatientDetailPage() {
                         <TableCell>{format(new Date(appt.dateTime), "PPpp")}</TableCell>
                         <TableCell>{appt.reason}</TableCell>
                         <TableCell>
-                          <Badge 
-                            variant={appt.status === 'Scheduled' ? 'default' : (appt.status === 'Completed' ? 'secondary' : 'destructive')}
-                            className={appt.status === 'Scheduled' ? 'bg-blue-500 hover:bg-blue-600' : appt.status === 'Completed' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}
-                          >
+                          <Badge variant={getBadgeVariant(appt.status)}>
                             {appt.status}
                           </Badge>
                         </TableCell>

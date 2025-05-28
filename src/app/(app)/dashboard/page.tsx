@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import { CalendarClock, UsersRound, ClipboardList, CalendarCheck2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import type { Appointment } from "@/lib/types";
 
 export default function DashboardPage() {
   const { 
@@ -27,6 +28,12 @@ export default function DashboardPage() {
   if (isLoading) {
     return <div className="flex justify-center items-center h-64">Loading dashboard...</div>;
   }
+
+  const getBadgeVariant = (status: Appointment['status']) => {
+    if (status === 'Scheduled') return 'default';
+    if (status === 'Completed') return 'accent';
+    return 'destructive';
+  };
 
   return (
     <div className="space-y-6">
@@ -92,9 +99,7 @@ export default function DashboardPage() {
                     <TableCell>{format(new Date(appt.dateTime), "PPpp")}</TableCell>
                     <TableCell>{appt.reason}</TableCell>
                     <TableCell>
-                      <Badge variant={appt.status === 'Scheduled' ? 'default' : 'secondary'}
-                       className={appt.status === 'Scheduled' ? 'bg-blue-500 hover:bg-blue-600' : appt.status === 'Completed' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}
-                      >
+                      <Badge variant={getBadgeVariant(appt.status)}>
                         {appt.status}
                       </Badge>
                     </TableCell>

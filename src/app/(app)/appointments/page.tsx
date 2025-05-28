@@ -20,6 +20,7 @@ import { format } from "date-fns";
 import type { Appointment } from "@/lib/types";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 
 export default function AppointmentsPage() {
   const { appointments: allAppointments, isLoading, patients } = useAppContext();
@@ -160,8 +161,11 @@ export default function AppointmentsPage() {
                     <TableCell>{appt.reason}</TableCell>
                     <TableCell>
                         <Badge 
-                            variant={appt.status === 'Scheduled' ? 'default' : (appt.status === 'Completed' ? 'secondary' : 'destructive')}
-                            className={appt.status === 'Scheduled' ? 'bg-blue-500 hover:bg-blue-600' : appt.status === 'Completed' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}
+                            variant={
+                                appt.status === 'Scheduled' ? 'default' : 
+                                appt.status === 'Completed' ? 'accent' : 
+                                'destructive'
+                            }
                         >
                         {appt.status}
                       </Badge>
