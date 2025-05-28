@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -43,14 +44,14 @@ export default {
   			border: 'hsl(var(--border))',
   			input: 'hsl(var(--input))',
   			ring: 'hsl(var(--ring))',
-  			chart: {
-  				'1': 'hsl(var(--chart-1))',
-  				'2': 'hsl(var(--chart-2))',
-  				'3': 'hsl(var(--chart-3))',
-  				'4': 'hsl(var(--chart-4))',
-  				'5': 'hsl(var(--chart-5))'
+  			chart: { // Added for consistency, even if not used immediately by Recharts
+  				'1': 'hsl(var(--primary))',
+  				'2': 'hsl(var(--accent))',
+  				'3': 'hsl(var(--secondary))', // Example, adjust as needed
+  				'4': 'hsl(var(--destructive))', // Example
+  				'5': 'hsl(var(--muted))' // Example
   			},
-  			sidebar: {
+  			sidebar: { // Retained from previous, good for theming consistency
   				DEFAULT: 'hsl(var(--sidebar-background))',
   				foreground: 'hsl(var(--sidebar-foreground))',
   				primary: 'hsl(var(--sidebar-primary))',
@@ -82,11 +83,21 @@ export default {
   				to: {
   					height: '0'
   				}
-  			}
+  			},
+        "collapsible-down": { // Needed for ShadCN Tabs
+          from: { height: "0" },
+          to: { height: "var(--radix-collapsible-content-height)" },
+        },
+        "collapsible-up": { // Needed for ShadCN Tabs
+          from: { height: "var(--radix-collapsible-content-height)" },
+          to: { height: "0" },
+        },
   		},
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
-  			'accordion-up': 'accordion-up 0.2s ease-out'
+  			'accordion-up': 'accordion-up 0.2s ease-out',
+        "collapsible-down": "collapsible-down 0.2s ease-out", // Needed for ShadCN Tabs
+        "collapsible-up": "collapsible-up 0.2s ease-out", // Needed for ShadCN Tabs
   		}
   	}
   },

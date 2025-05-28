@@ -1,13 +1,34 @@
+
+'use client';
+
 import { Navigation } from '@/components/navigation';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { auth } from '@/lib/firebase';
+import { signOut } from 'firebase/auth';
+import { toast } from "sonner";
+
 
 export default function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      toast.success("Déconnexion réussie.");
+      router.push('/'); // Redirection vers la page de connexion/accueil
+    } catch (error) {
+      console.error("Erreur de déconnexion:", error);
+      toast.error("Erreur lors de la déconnexion.");
+    }
+  };
+
   return (
     <div className="grid min-h-screen w-full lg:grid-cols-[280px_1fr]">
       <Navigation />
@@ -18,7 +39,7 @@ export default function AppLayout({
             {/* Optional: Add breadcrumbs or page title here */}
           </div>
           <ThemeToggle />
-          <Button variant="outline" size="icon" className="ml-auto">
+          <Button variant="outline" size="icon" className="ml-auto" onClick={handleLogout}>
             <LogOut className="h-5 w-5" />
             <span className="sr-only">Logout</span>
           </Button>
