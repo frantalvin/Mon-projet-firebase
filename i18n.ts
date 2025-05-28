@@ -1,7 +1,8 @@
+
 import {notFound} from 'next/navigation';
 import {getRequestConfig} from 'next-intl/server';
 
-// Configurez les langues que vous souhaitez prendre en charge
+// Configurer les langues que vous souhaitez prendre en charge
 const locales = ['fr'];
 
 console.log(`[[i18n.ts at ROOT]] File loaded and parsed. TOP LEVEL. Supported locales: ${locales.join(', ')}`);
@@ -36,13 +37,13 @@ export default getRequestConfig(async ({locale}) => {
   console.log(`[[i18n.ts at ROOT]] getRequestConfig CALLED for locale: ${locale}`);
 
   // Validez que la locale extraite de l'URL est prise en charge (uniquement 'fr' ici)
-  if (locale !== 'fr') {
-    console.error(`[[i18n.ts at ROOT]] Invalid locale: ${locale}. Expected 'fr'. Calling notFound().`);
+  if (!locales.includes(locale as any)) {
+    console.error(`[[i18n.ts at ROOT]] Invalid locale received: "${locale}". Expected one of: ${locales.join(', ')}. Calling notFound().`);
     notFound();
   }
 
-  console.log(`[[i18n.ts at ROOT]] Providing hardcoded messages for 'fr' locale.`);
+  console.log(`[[i18n.ts at ROOT]] Locale "${locale}" is valid. Providing hardcoded messages for 'fr' locale.`);
   return {
-    messages: hardcodedFrMessages
+    messages: hardcodedFrMessages // Pour l'instant, nous ne servons que 'fr'
   };
 });
