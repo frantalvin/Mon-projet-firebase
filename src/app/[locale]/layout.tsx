@@ -1,10 +1,12 @@
+
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import '../globals.css'; // Adjusted path
 import { AppProvider } from '@/contexts/app-context';
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
-import { NextIntlClientProvider, useMessages } from 'next-intl';
+import { NextIntlClientProvider } from 'next-intl';
+import { getMessages } from 'next-intl/server';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -28,16 +30,19 @@ interface RootLayoutProps {
   };
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
-  params: { locale },
+  params,
 }: Readonly<RootLayoutProps>) {
-  const messages = useMessages();
+  // Explicitly pass the locale from params to getMessages
+  // and ensure params is awaited if it's a promise (though Next.js usually resolves it)
+  const resolvedParams = await params;
+  const messages = await getMessages({ locale: resolvedParams.locale });
 
   return (
-    <html lang={locale} suppressHydrationWarning>
+    <html lang={resolvedParams.locale} suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased font-sans`}>
-        <NextIntlClientProvider locale={locale} messages={messages}>
+        <NextIntlClientProvider locale={resolvedParams.locale} messages={messages}>
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
