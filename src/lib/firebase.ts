@@ -10,7 +10,7 @@ const firebaseConfig = {
   authDomain: "mon-atta.firebaseapp.com", // Construit à partir de projectId
   projectId: "mon-atta",
   storageBucket: "mon-atta.firebasestorage.app",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // Veuillez vérifier cette valeur dans votre console Firebase (Paramètres du projet > Général)
+  messagingSenderId: "912302999620", // Mis à jour avec la valeur fournie
   appId: "1:912302999620:android:64cd0f3add2858b3dd9411", // Basé sur mobilesdk_app_id fourni. Pour une application web, un App ID Web dédié est généralement utilisé.
   measurementId: "YOUR_MEASUREMENT_ID" // Optionnel, pour Google Analytics. Vérifiez dans votre console Firebase si nécessaire.
 };
@@ -29,3 +29,4 @@ auth = getAuth(app);
 db = getFirestore(app);
 
 export { app, auth, db };
+
