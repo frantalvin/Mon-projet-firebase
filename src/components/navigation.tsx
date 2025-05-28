@@ -8,12 +8,16 @@ import {
 import { LayoutDashboard, UsersRound, CalendarDays } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useTranslations, useLocale } from 'next-intl';
+
+// Hardcoded labels (originally from messages/en.json)
+const navLabels = {
+  dashboard: "Dashboard",
+  patients: "Patients",
+  appointments: "Appointments"
+};
 
 export function Navigation() {
   const pathname = usePathname();
-  const t = useTranslations('Navigation');
-  const locale = useLocale();
 
   const navItems = [
     { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard },
@@ -21,23 +25,18 @@ export function Navigation() {
     { href: "/appointments", labelKey: "appointments", icon: CalendarDays },
   ];
 
-  // Remove locale prefix from pathname for comparison if present
-  const cleanPathname = pathname.startsWith(`/${locale}`) ? pathname.substring(`/${locale}`.length) || '/' : pathname;
-
   return (
     <SidebarMenu>
       {navItems.map((item) => {
-        const label = t(item.labelKey as any); // Type assertion for safety
-        // Prepend locale to href for Link component
-        const localizedHref = `/${locale}${item.href}`;
+        const label = navLabels[item.labelKey as keyof typeof navLabels] || item.labelKey;
         return (
           <SidebarMenuItem key={label}>
             <SidebarMenuButton
               asChild
-              isActive={cleanPathname.startsWith(item.href)}
+              isActive={pathname.startsWith(item.href)}
               tooltip={{ children: label }}
             >
-              <Link href={localizedHref}>
+              <Link href={item.href}>
                 <item.icon />
                 <span>{label}</span>
               </Link>

@@ -35,9 +35,9 @@ export default function NewPatientPage() {
   return (
     <Card className="shadow-lg max-w-3xl mx-auto">
       <CardHeader>
-        <CardTitle className="text-2xl font-bold">Register New Patient</CardTitle>
+        <CardTitle className="text-2xl font-bold">Register New Patient</CardTitle> 
         <CardDescription>
-          Fill in the details below to add a new patient to the system.
+          Fill in the details below to add a new patient to the system. 
         </CardDescription>
       </CardHeader>
       <CardContent>

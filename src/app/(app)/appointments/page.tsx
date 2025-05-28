@@ -67,13 +67,12 @@ export default function AppointmentsPage() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
                 <CardTitle className="text-2xl font-bold flex items-center">
-                    <CalendarDays className="mr-2 h-6 w-6" /> All Appointments
+                    <CalendarDays className="mr-2 h-6 w-6" /> All Appointments 
                 </CardTitle>
                 <CardDescription>
-                    View, search, and filter all scheduled appointments.
+                    View, search, and filter all scheduled appointments. 
                 </CardDescription>
             </div>
-            {/* Future: Button to schedule a generic appointment if needed */}
         </div>
       </CardHeader>
       <CardContent>
@@ -82,7 +81,7 @@ export default function AppointmentsPage() {
             <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search patient or reason..."
+              placeholder="Search patient or reason..." 
               className="pl-8 w-full"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -91,10 +90,10 @@ export default function AppointmentsPage() {
           
           <Select value={patientFilter} onValueChange={(value) => setPatientFilter(value as string | "all")}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Filter by Patient" />
+              <SelectValue placeholder="Filter by Patient" /> 
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Patients</SelectItem>
+              <SelectItem value="all">All Patients</SelectItem> 
               {patients.map(p => (
                 <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
               ))}
@@ -103,13 +102,13 @@ export default function AppointmentsPage() {
 
           <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as Appointment['status'] | "all")}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Filter by Status" />
+              <SelectValue placeholder="Filter by Status" /> 
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="Scheduled">Scheduled</SelectItem>
-              <SelectItem value="Completed">Completed</SelectItem>
-              <SelectItem value="Cancelled">Cancelled</SelectItem>
+              <SelectItem value="all">All Statuses</SelectItem> 
+              <SelectItem value="Scheduled">Scheduled</SelectItem> 
+              <SelectItem value="Completed">Completed</SelectItem> 
+              <SelectItem value="Cancelled">Cancelled</SelectItem> 
             </SelectContent>
           </Select>
 
@@ -123,7 +122,7 @@ export default function AppointmentsPage() {
                     )}
                 >
                     <Filter className="mr-2 h-4 w-4" />
-                    {dateFilter ? format(dateFilter, "PPP") : <span>Filter by Date</span>}
+                    {dateFilter ? format(dateFilter, "PPP") : <span>Filter by Date</span>} 
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -136,7 +135,7 @@ export default function AppointmentsPage() {
                     }}
                     initialFocus
                 />
-                 <Button variant="ghost" size="sm" className="w-full" onClick={() => { setDateFilter(undefined); setIsCalendarOpen(false); }}>Clear Date</Button>
+                 <Button variant="ghost" size="sm" className="w-full" onClick={() => { setDateFilter(undefined); setIsCalendarOpen(false); }}>Clear Date</Button> 
             </PopoverContent>
             </Popover>
         </div>
@@ -146,11 +145,11 @@ export default function AppointmentsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Patient</TableHead>
-                  <TableHead>Date & Time</TableHead>
-                  <TableHead>Reason</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead>Patient</TableHead> 
+                  <TableHead>Date & Time</TableHead> 
+                  <TableHead>Reason</TableHead> 
+                  <TableHead>Status</TableHead> 
+                  <TableHead>Actions</TableHead> 
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -173,7 +172,7 @@ export default function AppointmentsPage() {
                     <TableCell>
                       <Button asChild variant="outline" size="sm">
                         <Link href={`/patients/${appt.patientId}`}>
-                          <Eye className="mr-1 h-4 w-4" /> View Patient
+                          <Eye className="mr-1 h-4 w-4" /> View Patient 
                         </Link>
                       </Button>
                     </TableCell>
@@ -184,7 +183,7 @@ export default function AppointmentsPage() {
           </div>
         ) : (
           <div className="text-center py-8 text-muted-foreground">
-            No appointments found matching your criteria.
+            No appointments found matching your criteria. 
           </div>
         )}
       </CardContent>

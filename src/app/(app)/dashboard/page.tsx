@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useAppContext } from "@/contexts/app-context";
@@ -41,32 +40,32 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Patients</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Patients</CardTitle> 
             <UsersRound className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalPatients}</div>
-            <p className="text-xs text-muted-foreground">Currently registered in the system</p>
+            <p className="text-xs text-muted-foreground">Currently registered in the system</p> 
           </CardContent>
         </Card>
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Appointments</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Appointments</CardTitle> 
             <ClipboardList className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalAppointments}</div>
-            <p className="text-xs text-muted-foreground">Scheduled, completed, or cancelled</p>
+            <p className="text-xs text-muted-foreground">Scheduled, completed, or cancelled</p> 
           </CardContent>
         </Card>
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Appointments Today</CardTitle>
+            <CardTitle className="text-sm font-medium">Appointments Today</CardTitle> 
             <CalendarCheck2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{appointmentsTodayCount}</div>
-            <p className="text-xs text-muted-foreground">Scheduled for today</p>
+            <p className="text-xs text-muted-foreground">Scheduled for today</p> 
           </CardContent>
         </Card>
       </div>
@@ -74,7 +73,7 @@ export default function DashboardPage() {
       {/* Upcoming Appointments Section */}
       <Card className="shadow-lg">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-xl font-bold">Upcoming Appointments</CardTitle>
+          <CardTitle className="text-xl font-bold">Upcoming Appointments</CardTitle> 
           <CalendarClock className="h-6 w-6 text-muted-foreground" />
         </CardHeader>
         <CardContent>
@@ -82,10 +81,10 @@ export default function DashboardPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Patient</TableHead>
-                  <TableHead>Date & Time</TableHead>
-                  <TableHead>Reason</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Patient</TableHead> 
+                  <TableHead>Date & Time</TableHead> 
+                  <TableHead>Reason</TableHead> 
+                  <TableHead>Status</TableHead> 
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -108,11 +107,11 @@ export default function DashboardPage() {
               </TableBody>
             </Table>
           ) : (
-            <CardDescription>No upcoming appointments.</CardDescription>
+            <CardDescription>No upcoming appointments.</CardDescription> 
           )}
            <div className="mt-4">
             <Button asChild variant="outline" size="sm">
-                <Link href="/appointments">View All Appointments</Link>
+                <Link href="/appointments">View All Appointments</Link> 
             </Button>
            </div>
         </CardContent>
@@ -121,17 +120,17 @@ export default function DashboardPage() {
       {/* Quick Actions Section */}
       <Card className="shadow-lg">
         <CardHeader>
-            <CardTitle className="text-xl font-bold">Quick Actions</CardTitle>
+            <CardTitle className="text-xl font-bold">Quick Actions</CardTitle> 
         </CardHeader>
         <CardContent className="flex flex-wrap gap-4">
             <Button asChild>
-                <Link href="/patients/new">Register New Patient</Link>
+                <Link href="/patients/new">Register New Patient</Link> 
             </Button>
             <Button variant="outline" asChild>
-                <Link href="/patients">View All Patients</Link>
+                <Link href="/patients">View All Patients</Link> 
             </Button>
              <Button variant="outline" asChild>
-                <Link href="/appointments">Manage Appointments</Link>
+                <Link href="/appointments">Manage Appointments</Link> 
             </Button>
         </CardContent>
       </Card>
