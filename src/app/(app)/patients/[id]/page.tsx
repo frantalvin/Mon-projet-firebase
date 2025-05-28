@@ -1,13 +1,18 @@
-
 // src/app/(app)/patients/[id]/page.tsx
 'use client';
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BrainCircuit } from "lucide-react"; // Icone pour l'IA
+import { BrainCircuit } from "lucide-react";
+import { use } from 'react'; // Import the 'use' hook
 
-export default function PatientDetailPage({ params }: { params: { id: string } }) {
-  const patientId = params.id;
+export default function PatientDetailPage({ params: paramsProp }: { params: { id: string } }) {
+  // Unwrap paramsProp using React.use() as suggested by the error message.
+  // The 'use' hook can accept a Promise or a direct value.
+  // If paramsProp is a Promise, 'use' will suspend until it resolves.
+  // If paramsProp is already an object, 'use' will return it directly.
+  const resolvedParams = use(paramsProp);
+  const patientId = resolvedParams.id;
 
   // Données factices pour la démonstration
   const patientData = {
