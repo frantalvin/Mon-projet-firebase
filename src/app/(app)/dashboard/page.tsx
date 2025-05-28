@@ -7,14 +7,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input"; // Assurez-vous que Input est importé
 import { ResponsiveContainer, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Bar } from 'recharts';
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useMemo } from "react";
 import type { EmergencyCaseAnalysis } from "@/ai/flows/emergency-flow";
 import { analyzeEmergencyCase } from "@/ai/flows/emergency-flow";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, BrainCircuit, Users, CalendarDays, LineChartIcon, Shield, PlusCircle, Eye } from "lucide-react"; // Added more icons
+import { Terminal, BrainCircuit, Users, CalendarDays, LineChartIcon, Shield, PlusCircle, Eye, Search } from "lucide-react";
 import Link from 'next/link';
-import { db } from "@/lib/firebase"; // Import Firestore instance
+import { db } from "@/lib/firebase";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -62,11 +63,11 @@ function DashboardTabContent() {
       console.error("Error analyzing emergency case:", error);
       const errorMessage = error.message || "Une erreur inconnue est survenue lors de l'analyse.";
       setAnalysisError(`Erreur d'analyse : ${errorMessage}`);
-      setEmergencyAnalysis({
-        priority: "Erreur",
-        reasoning: `L'analyse a échoué: ${errorMessage}`,
-        recommendedActions: ["Vérifier la console pour les détails techniques."]
-      });
+      // setEmergencyAnalysis({
+      //   priority: "Erreur",
+      //   reasoning: `L'analyse a échoué: ${errorMessage}`,
+      //   recommendedActions: ["Vérifier la console pour les détails techniques."]
+      // });
     } finally {
       setIsAnalyzing(false);
     }
@@ -195,6 +196,7 @@ function PatientsTabContent() {
   const [patientsList, setPatientsList] = useState<PatientData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     const fetchPatients = async () => {
@@ -202,7 +204,6 @@ function PatientsTabContent() {
       setFetchError(null);
       try {
         const patientsCollectionRef = collection(db, "patients");
-        // Optionally, order by creation date or last name
         const q = query(patientsCollectionRef, orderBy("createdAt", "desc")); 
         const querySnapshot = await getDocs(q);
         const fetchedPatients: PatientData[] = [];
@@ -221,6 +222,16 @@ function PatientsTabContent() {
     fetchPatients();
   }, []);
 
+  const filteredPatients = useMemo(() => {
+    if (!searchTerm) {
+      return patientsList;
+    }
+    return patientsList.filter(patient =>
+      patient.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      patient.lastName.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [searchTerm, patientsList]);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -232,9 +243,30 @@ function PatientsTabContent() {
       <Card>
         <CardHeader>
           <CardTitle>Liste des Patients</CardTitle>
-          <CardDescription>Visualisez et gérez les dossiers patients.</CardDescription>
+          <CardDescription>
+            Visualisez et gérez les dossiers patients. Recherche par nom ou prénom.
+            <br />
+            <span className="text-xs text-muted-foreground">
+              (La recherche par maladie ou symptômes n'est pas encore implémentée.)
+            </span>
+          </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="mb-4">
+            <Label htmlFor="patient-search" className="sr-only">Rechercher un patient</Label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="patient-search"
+                type="search"
+                placeholder="Rechercher par nom ou prénom..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 w-full md:w-1/2 lg:w-1/3"
+              />
+            </div>
+          </div>
+
           {isLoading && <p className="text-center py-8 text-muted-foreground">Chargement des patients...</p>}
           {fetchError && (
             <Alert variant="destructive" className="mt-4">
@@ -243,12 +275,14 @@ function PatientsTabContent() {
               <AlertDescription>{fetchError}</AlertDescription>
             </Alert>
           )}
-          {!isLoading && !fetchError && patientsList.length === 0 && (
-            <p className="text-muted-foreground text-center py-8">Aucun patient enregistré.</p>
+          {!isLoading && !fetchError && filteredPatients.length === 0 && (
+             <p className="text-muted-foreground text-center py-8">
+              {searchTerm ? `Aucun patient trouvé pour "${searchTerm}".` : "Aucun patient enregistré."}
+            </p>
           )}
-          {!isLoading && !fetchError && patientsList.length > 0 && (
+          {!isLoading && !fetchError && filteredPatients.length > 0 && (
             <ul className="space-y-3">
-              {patientsList.map((patient) => (
+              {filteredPatients.map((patient) => (
                 <li key={patient.id} className="p-4 border rounded-lg flex justify-between items-center hover:bg-muted/50">
                   <div>
                     <h3 className="font-semibold">{patient.lastName}, {patient.firstName}</h3>
@@ -309,9 +343,9 @@ function AppointmentsTabContent() {
                       <td className="px-6 py-4">{rdv.medecin}</td>
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          rdv.statut === 'Prévu' ? 'bg-blue-100 text-primary' : // Primary for "Prévu"
-                          rdv.statut === 'Terminé' ? 'bg-green-100 text-accent-foreground' : // Accent for "Terminé"
-                          rdv.statut === 'Annulé' ? 'bg-red-100 text-destructive' : 'bg-gray-100 text-gray-800' // Destructive for "Annulé"
+                          rdv.statut === 'Prévu' ? 'bg-blue-100 text-primary' : 
+                          rdv.statut === 'Terminé' ? 'bg-green-100 text-accent-foreground' : 
+                          rdv.statut === 'Annulé' ? 'bg-red-100 text-destructive' : 'bg-gray-100 text-gray-800'
                         }`}>
                           {rdv.statut}
                         </span>
@@ -409,7 +443,7 @@ function MainAppPage() {
           <TabsTrigger value="admin" asChild><Link href="/dashboard?tab=admin" className="flex-1 text-center"><Shield className="inline-block mr-2 h-4 w-4" />Admin</Link></TabsTrigger>
         </TabsList>
         
-        <div className="flex-grow overflow-y-auto p-1">
+        <div className="flex-grow overflow-y-auto p-1"> {/* Changed p-4 to p-1 for slightly less padding */}
           <TabsContent value="dashboard" className={currentTab === 'dashboard' ? 'block' : 'hidden'}>
             {tabContents.dashboard}
           </TabsContent>
@@ -438,3 +472,5 @@ export default function DashboardPage() {
     </Suspense>
   );
 }
+
+    
