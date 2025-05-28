@@ -1,8 +1,9 @@
+
 "use client";
 
 import type { Patient, Appointment } from '@/lib/types';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { format } from 'date-fns';
+import { format, isToday } from 'date-fns';
 
 interface AppContextType {
   patients: Patient[];
@@ -14,6 +15,9 @@ interface AppContextType {
   addAppointment: (appointment: Omit<Appointment, 'id' | 'patientName'>) => Appointment;
   getAppointmentsByPatientId: (patientId: string) => Appointment[];
   getUpcomingAppointments: (limit?: number) => Appointment[];
+  getTotalPatients: () => number;
+  getTotalAppointments: () => number;
+  getAppointmentsTodayCount: () => number;
   isLoading: boolean;
 }
 
@@ -146,6 +150,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return limit ? upcoming.slice(0, limit) : upcoming;
   };
 
+  const getTotalPatients = (): number => patients.length;
+  const getTotalAppointments = (): number => appointments.length;
+  const getAppointmentsTodayCount = (): number => {
+    return appointments.filter(appt => isToday(new Date(appt.dateTime)) && appt.status === 'Scheduled').length;
+  };
+
+
   return (
     <AppContext.Provider value={{
       patients,
@@ -157,6 +168,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       addAppointment,
       getAppointmentsByPatientId,
       getUpcomingAppointments,
+      getTotalPatients,
+      getTotalAppointments,
+      getAppointmentsTodayCount,
       isLoading,
     }}>
       {children}
