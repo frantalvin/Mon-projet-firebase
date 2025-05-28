@@ -14,6 +14,9 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
+import { db } from "@/lib/firebase"; // Import Firestore instance
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { useState } from "react";
 
 const patientFormSchema = z.object({
   lastName: z.string().min(2, { message: "Le nom doit contenir au moins 2 caractères." }),
@@ -26,6 +29,8 @@ const patientFormSchema = z.object({
 type PatientFormValues = z.infer<typeof patientFormSchema>;
 
 export default function NewPatientPage() {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const form = useForm<PatientFormValues>({
     resolver: zodResolver(patientFormSchema),
     defaultValues: {
@@ -36,13 +41,31 @@ export default function NewPatientPage() {
     },
   });
 
-  function onSubmit(data: PatientFormValues) {
-    console.log("Données du nouveau patient :", data);
-    toast.success("Patient enregistré (simulation)", {
-      description: `Nom: ${data.firstName} ${data.lastName}`,
-    });
-    // Ici, vous ajouteriez la logique pour envoyer les données à Firestore
-    form.reset(); // Réinitialiser le formulaire après soumission
+  async function onSubmit(data: PatientFormValues) {
+    setIsSubmitting(true);
+    try {
+      // Prepare data for Firestore
+      const patientData = {
+        ...data,
+        dob: format(data.dob, "yyyy-MM-dd"), // Store DOB as a string or Timestamp
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+
+      const docRef = await addDoc(collection(db, "patients"), patientData);
+      console.log("Patient enregistré avec ID: ", docRef.id);
+      toast.success("Patient enregistré avec succès!", {
+        description: `ID: ${docRef.id} - Nom: ${data.firstName} ${data.lastName}`,
+      });
+      form.reset(); // Reset form after successful submission
+    } catch (error) {
+      console.error("Erreur lors de l'enregistrement du patient :", error);
+      toast.error("Erreur lors de l'enregistrement du patient.", {
+        description: error instanceof Error ? error.message : "Une erreur inconnue est survenue.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -63,7 +86,7 @@ export default function NewPatientPage() {
                     <FormItem>
                       <FormLabel>Nom</FormLabel>
                       <FormControl>
-                        <Input placeholder="Dupont" {...field} />
+                        <Input placeholder="Dupont" {...field} disabled={isSubmitting} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -76,7 +99,7 @@ export default function NewPatientPage() {
                     <FormItem>
                       <FormLabel>Prénom</FormLabel>
                       <FormControl>
-                        <Input placeholder="Jean" {...field} />
+                        <Input placeholder="Jean" {...field} disabled={isSubmitting} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -98,6 +121,7 @@ export default function NewPatientPage() {
                               "w-full pl-3 text-left font-normal",
                               !field.value && "text-muted-foreground"
                             )}
+                            disabled={isSubmitting}
                           >
                             {field.value ? (
                               format(field.value, "PPP") // PPP for locale-specific format e.g., "Nov 27, 2024"
@@ -131,7 +155,7 @@ export default function NewPatientPage() {
                   <FormItem>
                     <FormLabel>Téléphone (Optionnel)</FormLabel>
                     <FormControl>
-                      <Input type="tel" placeholder="0123456789" {...field} />
+                      <Input type="tel" placeholder="0123456789" {...field} disabled={isSubmitting} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -144,13 +168,15 @@ export default function NewPatientPage() {
                   <FormItem>
                     <FormLabel>Email (Optionnel)</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="jean.dupont@example.com" {...field} />
+                      <Input type="email" placeholder="jean.dupont@example.com" {...field} disabled={isSubmitting} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full md:w-auto">Enregistrer le Patient</Button>
+              <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting}>
+                {isSubmitting ? "Enregistrement..." : "Enregistrer le Patient"}
+              </Button>
             </form>
           </Form>
         </CardContent>
