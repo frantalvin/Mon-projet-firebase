@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, useEffect } from 'react'; // Added useEffect
 import { useRouter } from 'next/navigation';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, type AuthError } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Assurez-vous que Tabs est disponible
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 
@@ -19,7 +19,12 @@ export default function HomePage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false); // Pour basculer entre connexion et inscription
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [currentYear, setCurrentYear] = useState<number | null>(null);
+
+  useEffect(() => {
+    setCurrentYear(new Date().getFullYear());
+  }, []);
 
   const handleAuth = async (e: FormEvent) => {
     e.preventDefault();
@@ -77,8 +82,8 @@ export default function HomePage() {
 
         <Tabs defaultValue="login" className="w-full max-w-md">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login" onClick={() => { setIsSignUp(false); setError(null); }}>Connexion</TabsTrigger>
-            <TabsTrigger value="signup" onClick={() => { setIsSignUp(true); setError(null); }}>Inscription</TabsTrigger>
+            <TabsTrigger value="login" onClick={() => { setIsSignUp(false); setError(null); setEmail(''); setPassword(''); }}>Connexion</TabsTrigger>
+            <TabsTrigger value="signup" onClick={() => { setIsSignUp(true); setError(null); setEmail(''); setPassword(''); }}>Inscription</TabsTrigger>
           </TabsList>
           <TabsContent value="login">
             <Card>
@@ -97,6 +102,7 @@ export default function HomePage() {
                       value={email} 
                       onChange={(e) => setEmail(e.target.value)} 
                       required 
+                      autoComplete="email"
                     />
                   </div>
                   <div className="space-y-2 text-left">
@@ -107,6 +113,7 @@ export default function HomePage() {
                       value={password} 
                       onChange={(e) => setPassword(e.target.value)} 
                       required 
+                      autoComplete="current-password"
                     />
                   </div>
                 </CardContent>
@@ -142,6 +149,7 @@ export default function HomePage() {
                       value={email} 
                       onChange={(e) => setEmail(e.target.value)} 
                       required 
+                      autoComplete="email"
                     />
                   </div>
                   <div className="space-y-2 text-left">
@@ -153,6 +161,7 @@ export default function HomePage() {
                       value={password} 
                       onChange={(e) => setPassword(e.target.value)} 
                       required 
+                      autoComplete="new-password"
                     />
                   </div>
                 </CardContent>
@@ -175,7 +184,9 @@ export default function HomePage() {
         
       </main>
       <footer className="w-full py-6 text-center">
-        <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} PatientWise. Tous droits réservés.</p>
+        <p className="text-sm text-muted-foreground">
+          © {currentYear || new Date().getFullYear()} PatientWise. Tous droits réservés.
+        </p>
       </footer>
     </div>
   );
