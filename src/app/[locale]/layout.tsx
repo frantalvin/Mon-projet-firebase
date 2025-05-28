@@ -31,7 +31,7 @@ interface RootLayoutProps {
   };
 }
 
-// Only French is supported as per current middleware.ts and new src/i18n.ts
+// Only French is supported as per current middleware.ts and new root i18n.ts
 const supportedLocales = ['fr'];
 
 export default async function RootLayout({
@@ -54,7 +54,7 @@ export default async function RootLayout({
   } catch (error) {
     console.error(`[RootLayout] Error calling getMessages for locale ${locale}:`, error);
     if ((error as Error).message.includes("Couldn't find next-intl config file")) {
-        console.error("[RootLayout] CRITICAL: next-intl config file (expected at src/i18n.ts) not found or not processed by next-intl/server. Check build/runtime path resolution. Ensure tsconfig.json baseUrl is set if needed, and that there are no conflicting i18n.ts files.");
+        console.error("[RootLayout] CRITICAL: next-intl config file (expected at root i18n.ts) not found or not processed by next-intl/server. Check build/runtime path resolution. Ensure tsconfig.json baseUrl is set if needed, and that there are no conflicting i18n.ts files.");
     }
     // Propagate notFound if getMessages fails (e.g., config not found, or i18n.ts itself calls notFound)
     notFound();
@@ -64,7 +64,7 @@ export default async function RootLayout({
   // for a "config found but no messages for locale" scenario, though i18n.ts should handle that.
   if (!messages || Object.keys(messages).length === 0) {
     console.error(`[RootLayout] Messages are undefined, null, or empty for locale: ${locale} after getMessages call. Content:`, messages);
-    console.error(`[RootLayout] This might indicate an issue with src/i18n.ts (e.g., it called notFound()) or the message files for locale: ${locale}. Calling notFound().`);
+    console.error(`[RootLayout] This might indicate an issue with the root i18n.ts (e.g., it called notFound()) or the message files for locale: ${locale}. Calling notFound().`);
     notFound();
   }
 
@@ -88,4 +88,3 @@ export default async function RootLayout({
     </html>
   );
 }
-
