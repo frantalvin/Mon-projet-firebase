@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input"; // Assurez-vous que Input est importé
+import { Input } from "@/components/ui/input";
 import { ResponsiveContainer, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Bar } from 'recharts';
 import { useState, useEffect, Suspense, useMemo } from "react";
 import type { EmergencyCaseAnalysis } from "@/ai/flows/emergency-flow";
@@ -63,11 +63,6 @@ function DashboardTabContent() {
       console.error("Error analyzing emergency case:", error);
       const errorMessage = error.message || "Une erreur inconnue est survenue lors de l'analyse.";
       setAnalysisError(`Erreur d'analyse : ${errorMessage}`);
-      // setEmergencyAnalysis({
-      //   priority: "Erreur",
-      //   reasoning: `L'analyse a échoué: ${errorMessage}`,
-      //   recommendedActions: ["Vérifier la console pour les détails techniques."]
-      // });
     } finally {
       setIsAnalyzing(false);
     }
@@ -435,15 +430,38 @@ function MainAppPage() {
   return (
     <div className="flex flex-col h-full">
       <Tabs defaultValue={currentTab} value={currentTab} className="flex-grow flex flex-col">
-        <TabsList className="grid w-full grid-cols-5 mb-4 sticky top-0 bg-background z-10 shadow-sm">
-          <TabsTrigger value="dashboard" asChild><Link href="/dashboard?tab=dashboard" className="flex-1 text-center"><BrainCircuit className="inline-block mr-2 h-4 w-4" />Tableau de Bord</Link></TabsTrigger>
-          <TabsTrigger value="patients" asChild><Link href="/dashboard?tab=patients" className="flex-1 text-center"><Users className="inline-block mr-2 h-4 w-4" />Patients</Link></TabsTrigger>
-          <TabsTrigger value="appointments" asChild><Link href="/dashboard?tab=appointments" className="flex-1 text-center"><CalendarDays className="inline-block mr-2 h-4 w-4" />Rendez-vous</Link></TabsTrigger>
-          <TabsTrigger value="statistics" asChild><Link href="/dashboard?tab=statistics" className="flex-1 text-center"><LineChartIcon className="inline-block mr-2 h-4 w-4" />Statistiques</Link></TabsTrigger>
-          <TabsTrigger value="admin" asChild><Link href="/dashboard?tab=admin" className="flex-1 text-center"><Shield className="inline-block mr-2 h-4 w-4" />Admin</Link></TabsTrigger>
-        </TabsList>
+        {/* Wrapper for horizontal scrolling and sticky positioning */}
+        <div className="overflow-x-auto sticky top-0 bg-background z-10 shadow-sm border-b mb-4">
+          <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-max">
+            <TabsTrigger value="dashboard" asChild>
+              <Link href="/dashboard?tab=dashboard" className="px-3 py-1.5 text-sm font-medium flex items-center justify-center gap-2">
+                <BrainCircuit className="h-4 w-4" />Tableau de Bord
+              </Link>
+            </TabsTrigger>
+            <TabsTrigger value="patients" asChild>
+              <Link href="/dashboard?tab=patients" className="px-3 py-1.5 text-sm font-medium flex items-center justify-center gap-2">
+                <Users className="h-4 w-4" />Patients
+              </Link>
+            </TabsTrigger>
+            <TabsTrigger value="appointments" asChild>
+              <Link href="/dashboard?tab=appointments" className="px-3 py-1.5 text-sm font-medium flex items-center justify-center gap-2">
+                <CalendarDays className="h-4 w-4" />Rendez-vous
+              </Link>
+            </TabsTrigger>
+            <TabsTrigger value="statistics" asChild>
+              <Link href="/dashboard?tab=statistics" className="px-3 py-1.5 text-sm font-medium flex items-center justify-center gap-2">
+                <LineChartIcon className="h-4 w-4" />Statistiques
+              </Link>
+            </TabsTrigger>
+            <TabsTrigger value="admin" asChild>
+              <Link href="/dashboard?tab=admin" className="px-3 py-1.5 text-sm font-medium flex items-center justify-center gap-2">
+                <Shield className="h-4 w-4" />Admin
+              </Link>
+            </TabsTrigger>
+          </TabsList>
+        </div>
         
-        <div className="flex-grow overflow-y-auto p-1"> {/* Changed p-4 to p-1 for slightly less padding */}
+        <div className="flex-grow overflow-y-auto p-1">
           <TabsContent value="dashboard" className={currentTab === 'dashboard' ? 'block' : 'hidden'}>
             {tabContents.dashboard}
           </TabsContent>
@@ -472,5 +490,3 @@ export default function DashboardPage() {
     </Suspense>
   );
 }
-
-    
