@@ -1,9 +1,13 @@
-export default function AppointmentsPage() {
+
+// This file is deprecated and its content moved to /src/app/(app)/dashboard/page.tsx
+// Please delete this file.
+export default function DeprecatedAppointmentsPage() {
   return (
     <div>
-      <h1 className="text-2xl font-semibold">Appointments</h1>
-      <p className="mt-2">Manage and view all appointments here.</p>
-      {/* Placeholder for appointments list or calendar */}
+      <h1>This page is deprecated. Please delete src/app/(app)/appointments/page.tsx</h1>
+      <p>Content has been moved to the main dashboard page with tabs.</p>
     </div>
   );
 }
+
+    

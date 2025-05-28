@@ -1,11 +1,11 @@
 
 'use client';
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation'; // Standard Next.js hook
+import Link from 'next/link'; // Using standard Next.js Link for query param changes
+import { usePathname, useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area'; // Assurez-vous que ScrollArea est disponible
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Sheet,
   SheetContent,
@@ -20,63 +20,77 @@ import {
   SidebarFooter,
   SidebarNav,
   SidebarNavMain,
-  // SidebarNavHeader,
-  // SidebarNavHeaderTitle,
   SidebarNavLink,
-  // SidebarSeparator,
 } from '@/components/ui/sidebar';
 import { LayoutDashboard, UsersRound, CalendarDays, Menu, LineChart, ShieldCheck } from 'lucide-react';
 
-export function Navigation() {
-  const pathname = usePathname();
+interface NavItem {
+  query: string;
+  label: string;
+  icon: React.ElementType;
+}
 
-  const navItems = [
-    { href: '/dashboard', label: 'Tableau de Bord', icon: LayoutDashboard },
-    { href: '/patients', label: 'Patients', icon: UsersRound },
-    { href: '/appointments', label: 'Rendez-vous', icon: CalendarDays },
-    { href: '/statistics', label: 'Statistiques', icon: LineChart },
-    { href: '/admin', label: 'Admin', icon: ShieldCheck },
+export function Navigation() {
+  const pathname = usePathname(); // Base path, e.g., /dashboard
+  const searchParams = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'dashboard';
+
+  const navItems: NavItem[] = [
+    { query: 'dashboard', label: 'Tableau de Bord', icon: LayoutDashboard },
+    { query: 'patients', label: 'Patients', icon: UsersRound },
+    { query: 'appointments', label: 'Rendez-vous', icon: CalendarDays },
+    { query: 'statistics', label: 'Statistiques', icon: LineChart },
+    { query: 'admin', label: 'Admin', icon: ShieldCheck },
   ];
 
-  const isActive = (path: string) => {
-    // Handle exact match for dashboard, and prefix match for others
-    if (path === '/dashboard') return pathname === path;
-    // For other routes, check if the pathname starts with the item's href.
-    // This handles nested routes like /patients/[id] correctly.
-    return pathname.startsWith(path);
+  // Helper to construct the href for navigation links
+  const getHref = (tabQuery: string) => {
+    // Assuming the base path for the tabbed interface is /dashboard
+    // If it could be other paths, this logic might need adjustment
+    return `/dashboard?tab=${tabQuery}`;
   };
 
   const navContent = (isSheet = false) => (
     <>
       <SidebarNav>
         <SidebarNavMain>
-          {navItems.map((item) =>
-            isSheet ? (
-              <SheetClose asChild key={item.href}>
+          {navItems.map((item) => {
+            const href = getHref(item.query);
+            const isActive = activeTab === item.query;
+            const NavLinkComponent = isSheet ? SheetClose : 'div'; // SheetClose needs to wrap Link for mobile
+
+            return isSheet ? (
+              <SheetClose asChild key={item.query}>
                 <SidebarNavLink
-                  href={item.href}
-                  active={isActive(item.href)}
+                  href={href}
+                  active={isActive}
+                  asChild // Important for SheetClose to work with Link
                 >
-                  <item.icon className="w-4 h-4 mr-2" />
-                  {item.label}
+                  <Link href={href} className="flex items-center">
+                    <item.icon className="w-4 h-4 mr-2" />
+                    {item.label}
+                  </Link>
                 </SidebarNavLink>
               </SheetClose>
             ) : (
               <SidebarNavLink
-                key={item.href}
-                href={item.href}
-                active={isActive(item.href)}
+                key={item.query}
+                href={href}
+                active={isActive}
+                asChild
               >
-                <item.icon className="w-4 h-4 mr-2" />
-                {item.label}
+                <Link href={href} className="flex items-center">
+                  <item.icon className="w-4 h-4 mr-2" />
+                  {item.label}
+                </Link>
               </SidebarNavLink>
-            )
-          )}
+            );
+          })}
         </SidebarNavMain>
       </SidebarNav>
     </>
   );
-
+  
   return (
     <>
       {/* Desktop Sidebar */}
@@ -84,7 +98,7 @@ export function Navigation() {
         <SidebarHeader>
           <SidebarTitle>PatientWise</SidebarTitle>
         </SidebarHeader>
-        <ScrollArea className="flex-grow"> {/* Added ScrollArea for desktop */}
+        <ScrollArea className="flex-grow">
           <SidebarBody>
            {navContent()}
           </SidebarBody>
@@ -95,8 +109,7 @@ export function Navigation() {
       </Sidebar>
 
       {/* Mobile Sheet Trigger */}
-      {/* The SheetTrigger logic needs to be outside the main content flow if it's fixed */}
-      <div className="lg:hidden fixed top-3 left-3 z-50"> {/* Adjusted positioning */}
+      <div className="lg:hidden fixed top-3 left-3 z-50">
         <Sheet>
           <SheetTrigger asChild>
             <Button variant="outline" size="icon">
@@ -104,12 +117,12 @@ export function Navigation() {
               <span className="sr-only">Ouvrir le menu</span>
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-[300px] sm:w-[300px] p-0 flex flex-col"> {/* Ensure flex-col for SheetContent */}
-            <Sidebar className="flex flex-col h-full"> {/* flex-col and h-full for Sidebar itself */}
+          <SheetContent side="left" className="w-[300px] sm:w-[300px] p-0 flex flex-col">
+            <Sidebar className="flex flex-col h-full">
               <SidebarHeader>
                 <SidebarTitle>PatientWise</SidebarTitle>
               </SidebarHeader>
-              <ScrollArea className="flex-grow"> {/* ScrollArea for mobile too */}
+              <ScrollArea className="flex-grow">
                 <SidebarBody>
                   {navContent(true)}
                 </SidebarBody>
@@ -124,3 +137,5 @@ export function Navigation() {
     </>
   );
 }
+
+    
