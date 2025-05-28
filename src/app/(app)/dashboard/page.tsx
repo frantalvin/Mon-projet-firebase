@@ -12,8 +12,13 @@ import { useState, useEffect, Suspense } from "react";
 import type { EmergencyCaseAnalysis } from "@/ai/flows/emergency-flow";
 import { analyzeEmergencyCase } from "@/ai/flows/emergency-flow";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, BrainCircuit } from "lucide-react";
-import Link from 'next/link'; // For linking to new/detail patient pages
+import { Terminal, BrainCircuit, Users, CalendarDays, LineChartIcon, Shield, PlusCircle, Eye } from "lucide-react"; // Added more icons
+import Link from 'next/link';
+import { db } from "@/lib/firebase"; // Import Firestore instance
+import { collection, getDocs, query, orderBy } from "firebase/firestore";
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+
 
 // Placeholder data for appointments chart
 const weeklyAppointmentsData = [
@@ -37,6 +42,7 @@ function DashboardTabContent() {
   const [appointmentsToday, setAppointmentsToday] = useState<number | null>(null);
 
   useEffect(() => {
+    // Placeholder data, replace with actual data fetching if needed
     setActivePatients(125); 
     setAppointmentsToday(8); 
   }, []);
@@ -54,7 +60,7 @@ function DashboardTabContent() {
       setEmergencyAnalysis(result);
     } catch (error: any) {
       console.error("Error analyzing emergency case:", error);
-      const errorMessage = error instanceof Error ? error.message : "Une erreur inconnue est survenue lors de l'analyse.";
+      const errorMessage = error.message || "Une erreur inconnue est survenue lors de l'analyse.";
       setAnalysisError(`Erreur d'analyse : ${errorMessage}`);
       setEmergencyAnalysis({
         priority: "Erreur",
@@ -93,8 +99,8 @@ function DashboardTabContent() {
             <CardTitle>Actions Rapides</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col space-y-2">
-            <Button asChild><Link href="/patients/new">Nouveau Patient</Link></Button>
-            <Button variant="outline">Nouveau Rendez-vous</Button>
+            <Button asChild><Link href="/patients/new"><PlusCircle className="mr-2 h-4 w-4" />Nouveau Patient</Link></Button>
+            <Button variant="outline">Nouveau Rendez-vous</Button> {/* TODO: Implement this link/action */}
           </CardContent>
         </Card>
       </div>
@@ -122,7 +128,7 @@ function DashboardTabContent() {
         <CardHeader>
           <CardTitle>Priorisation des Urgences (IA)</CardTitle>
           <CardDescription>
-            Décrivez un cas d'urgence pour obtenir une priorisation et des recommandations basées sur l'IA.
+            Décrivez un cas d'urgence pour obtenir une priorisation et des recommandations basées sur l'IA. (Min. 10 caractères)
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -137,7 +143,8 @@ function DashboardTabContent() {
               disabled={isAnalyzing}
             />
           </div>
-          <Button onClick={handleAnalyzeEmergency} disabled={isAnalyzing || !emergencyDescription.trim()}>
+          <Button onClick={handleAnalyzeEmergency} disabled={isAnalyzing || !emergencyDescription.trim() || emergencyDescription.length < 10}>
+            <BrainCircuit className="mr-2 h-4 w-4" />
             {isAnalyzing ? "Analyse en cours..." : "Analyser l'Urgence"}
           </Button>
           
@@ -174,20 +181,52 @@ function DashboardTabContent() {
   );
 }
 
+interface PatientData {
+  id: string;
+  firstName: string;
+  lastName: string;
+  dob: string; // Stored as yyyy-MM-dd string
+  phone?: string;
+  email?: string;
+  createdAt?: any; // Firestore Timestamp or ServerTimestamp
+}
+
 function PatientsTabContent() {
-  // Placeholder data for patients list
-  const patients = [
-    { id: '1', nom: 'Dupont, Jean', age: 45, dernierRdv: '2023-05-10' },
-    { id: '2', nom: 'Martin, Sophie', age: 32, dernierRdv: '2023-06-15' },
-    { id: '3', nom: 'Bernard, Paul', age: 67, dernierRdv: '2023-04-20' },
-  ];
+  const [patientsList, setPatientsList] = useState<PatientData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchPatients = async () => {
+      setIsLoading(true);
+      setFetchError(null);
+      try {
+        const patientsCollectionRef = collection(db, "patients");
+        // Optionally, order by creation date or last name
+        const q = query(patientsCollectionRef, orderBy("createdAt", "desc")); 
+        const querySnapshot = await getDocs(q);
+        const fetchedPatients: PatientData[] = [];
+        querySnapshot.forEach((doc) => {
+          fetchedPatients.push({ id: doc.id, ...doc.data() } as PatientData);
+        });
+        setPatientsList(fetchedPatients);
+      } catch (error: any) {
+        console.error("Erreur lors de la récupération des patients :", error);
+        setFetchError("Impossible de charger la liste des patients. " + (error.message || ""));
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPatients();
+  }, []);
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-semibold">Gestion des Patients</h1>
         <Button asChild>
-          <Link href="/patients/new">Nouveau Patient</Link>
+          <Link href="/patients/new"><PlusCircle className="mr-2 h-4 w-4" />Nouveau Patient</Link>
         </Button>
       </div>
       <Card>
@@ -196,22 +235,33 @@ function PatientsTabContent() {
           <CardDescription>Visualisez et gérez les dossiers patients.</CardDescription>
         </CardHeader>
         <CardContent>
-          {patients.length > 0 ? (
+          {isLoading && <p className="text-center py-8 text-muted-foreground">Chargement des patients...</p>}
+          {fetchError && (
+            <Alert variant="destructive" className="mt-4">
+              <Terminal className="h-4 w-4" />
+              <AlertTitle>Erreur de Chargement</AlertTitle>
+              <AlertDescription>{fetchError}</AlertDescription>
+            </Alert>
+          )}
+          {!isLoading && !fetchError && patientsList.length === 0 && (
+            <p className="text-muted-foreground text-center py-8">Aucun patient enregistré.</p>
+          )}
+          {!isLoading && !fetchError && patientsList.length > 0 && (
             <ul className="space-y-3">
-              {patients.map((patient) => (
+              {patientsList.map((patient) => (
                 <li key={patient.id} className="p-4 border rounded-lg flex justify-between items-center hover:bg-muted/50">
                   <div>
-                    <h3 className="font-semibold">{patient.nom}</h3>
-                    <p className="text-sm text-muted-foreground">Âge: {patient.age} | Dernier RDV: {patient.dernierRdv}</p>
+                    <h3 className="font-semibold">{patient.lastName}, {patient.firstName}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Date de Naissance: {patient.dob ? format(new Date(patient.dob), 'dd MMMM yyyy', { locale: fr }) : 'N/A'}
+                    </p>
                   </div>
                   <Button variant="outline" size="sm" asChild>
-                    <Link href={`/patients/${patient.id}`}>Voir Fiche</Link>
+                    <Link href={`/patients/${patient.id}`}><Eye className="mr-2 h-4 w-4" />Voir Fiche</Link>
                   </Button>
                 </li>
               ))}
             </ul>
-          ) : (
-            <p className="text-muted-foreground text-center py-8">Aucun patient enregistré.</p>
           )}
         </CardContent>
       </Card>
@@ -231,7 +281,7 @@ function AppointmentsTabContent() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-semibold">Gestion des Rendez-vous</h1>
-        <Button>Nouveau Rendez-vous</Button>
+        <Button><PlusCircle className="mr-2 h-4 w-4" />Nouveau Rendez-vous</Button>
       </div>
       <Card>
         <CardHeader>
@@ -259,9 +309,9 @@ function AppointmentsTabContent() {
                       <td className="px-6 py-4">{rdv.medecin}</td>
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          rdv.statut === 'Prévu' ? 'bg-blue-100 text-blue-800' :
-                          rdv.statut === 'Terminé' ? 'bg-green-100 text-green-800' :
-                          rdv.statut === 'Annulé' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
+                          rdv.statut === 'Prévu' ? 'bg-blue-100 text-primary' : // Primary for "Prévu"
+                          rdv.statut === 'Terminé' ? 'bg-green-100 text-accent-foreground' : // Accent for "Terminé"
+                          rdv.statut === 'Annulé' ? 'bg-red-100 text-destructive' : 'bg-gray-100 text-gray-800' // Destructive for "Annulé"
                         }`}>
                           {rdv.statut}
                         </span>
@@ -338,7 +388,7 @@ function AdminTabContent() {
 
 function MainAppPage() {
   const searchParams = useSearchParams();
-  const currentTab = searchParams.get('tab') || 'dashboard'; // Default to 'dashboard'
+  const currentTab = searchParams.get('tab') || 'dashboard';
 
   const tabContents: { [key: string]: React.ReactNode } = {
     dashboard: <DashboardTabContent />,
@@ -348,29 +398,18 @@ function MainAppPage() {
     admin: <AdminTabContent />,
   };
   
-  // Note: The Tabs component from shadcn/ui controls its own state internally based on defaultValue.
-  // To make it controlled by URL, we'd typically set its `value` prop and use `onValueChange`
-  // to update the URL (e.g., router.push).
-  // For this iteration, clicking a tab will change its visual state, but the URL change (and thus content change)
-  // is driven by the Navigation component setting the query param.
-  // This means direct clicks on TabTriggers won't update the URL or content displayed here
-  // unless we add router.push to onValueChange, or always use the Navigation component.
-  // For simplicity, relying on Navigation component to set the URL.
-
   return (
     <div className="flex flex-col h-full">
       <Tabs defaultValue={currentTab} value={currentTab} className="flex-grow flex flex-col">
-        {/* TabsList could be hidden if navigation is solely handled by the sidebar */}
-        {/* Or it could be a secondary way to navigate tabs */}
-        <TabsList className="grid w-full grid-cols-5 mb-4 sticky top-0 bg-background z-10">
-          <TabsTrigger value="dashboard" asChild><Link href="/dashboard?tab=dashboard" className="flex-1 text-center">Tableau de Bord</Link></TabsTrigger>
-          <TabsTrigger value="patients" asChild><Link href="/dashboard?tab=patients" className="flex-1 text-center">Patients</Link></TabsTrigger>
-          <TabsTrigger value="appointments" asChild><Link href="/dashboard?tab=appointments" className="flex-1 text-center">Rendez-vous</Link></TabsTrigger>
-          <TabsTrigger value="statistics" asChild><Link href="/dashboard?tab=statistics" className="flex-1 text-center">Statistiques</Link></TabsTrigger>
-          <TabsTrigger value="admin" asChild><Link href="/dashboard?tab=admin" className="flex-1 text-center">Admin</Link></TabsTrigger>
+        <TabsList className="grid w-full grid-cols-5 mb-4 sticky top-0 bg-background z-10 shadow-sm">
+          <TabsTrigger value="dashboard" asChild><Link href="/dashboard?tab=dashboard" className="flex-1 text-center"><BrainCircuit className="inline-block mr-2 h-4 w-4" />Tableau de Bord</Link></TabsTrigger>
+          <TabsTrigger value="patients" asChild><Link href="/dashboard?tab=patients" className="flex-1 text-center"><Users className="inline-block mr-2 h-4 w-4" />Patients</Link></TabsTrigger>
+          <TabsTrigger value="appointments" asChild><Link href="/dashboard?tab=appointments" className="flex-1 text-center"><CalendarDays className="inline-block mr-2 h-4 w-4" />Rendez-vous</Link></TabsTrigger>
+          <TabsTrigger value="statistics" asChild><Link href="/dashboard?tab=statistics" className="flex-1 text-center"><LineChartIcon className="inline-block mr-2 h-4 w-4" />Statistiques</Link></TabsTrigger>
+          <TabsTrigger value="admin" asChild><Link href="/dashboard?tab=admin" className="flex-1 text-center"><Shield className="inline-block mr-2 h-4 w-4" />Admin</Link></TabsTrigger>
         </TabsList>
         
-        <div className="flex-grow overflow-y-auto p-1"> {/* Added padding for scrollbar visibility */}
+        <div className="flex-grow overflow-y-auto p-1">
           <TabsContent value="dashboard" className={currentTab === 'dashboard' ? 'block' : 'hidden'}>
             {tabContents.dashboard}
           </TabsContent>
@@ -392,14 +431,10 @@ function MainAppPage() {
   );
 }
 
-
-// Wrap MainAppPage with Suspense because useSearchParams() needs it
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<div>Chargement des paramètres...</div>}>
+    <Suspense fallback={<div className="flex justify-center items-center h-full"><p>Chargement de l'application...</p></div>}>
       <MainAppPage />
     </Suspense>
   );
 }
-
-    
