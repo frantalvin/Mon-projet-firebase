@@ -7,7 +7,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ResponsiveContainer, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Bar } from 'recharts';
 import { useState, useEffect } from "react";
-import type { EmergencyCaseAnalysis } from "@/ai/flows/emergency-flow"; // We'll create this later
+import type { EmergencyCaseAnalysis, EmergencyCaseInput } from "@/ai/flows/emergency-flow";
+import { analyzeEmergencyCase } from "@/ai/flows/emergency-flow"; 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Terminal } from "lucide-react";
 
 // Placeholder data for appointments chart
 const weeklyAppointmentsData = [
@@ -24,6 +27,7 @@ export default function DashboardPage() {
   const [emergencyDescription, setEmergencyDescription] = useState("");
   const [emergencyAnalysis, setEmergencyAnalysis] = useState<EmergencyCaseAnalysis | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [activePatients, setActivePatients] = useState<number | null>(null);
   const [appointmentsToday, setAppointmentsToday] = useState<number | null>(null);
 
@@ -35,33 +39,24 @@ export default function DashboardPage() {
 
   const handleAnalyzeEmergency = async () => {
     if (!emergencyDescription.trim()) {
-      alert("Veuillez décrire le cas d'urgence.");
+      setAnalysisError("Veuillez décrire le cas d'urgence.");
       return;
     }
     setIsAnalyzing(true);
     setEmergencyAnalysis(null);
+    setAnalysisError(null);
     try {
-      // const { analyzeEmergencyCase } = await import('@/ai/flows/emergency-flow'); // We'll create this later
-      // const result = await analyzeEmergencyCase({ description: emergencyDescription });
-      // Simulating AI response for now
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      const simulatedResult: EmergencyCaseAnalysis = {
-        priority: Math.random() > 0.5 ? "Élevée" : "Moyenne",
-        reasoning: "Simulation : Le patient présente des symptômes X et Y nécessitant une attention rapide.",
-        recommendedActions: [
-          "Simulation : Contacter le spécialiste de garde.",
-          "Simulation : Préparer la salle d'examen 3."
-        ]
-      };
-      setEmergencyAnalysis(simulatedResult);
-    } catch (error) {
+      const result = await analyzeEmergencyCase({ description: emergencyDescription });
+      setEmergencyAnalysis(result);
+    } catch (error: any) {
       console.error("Error analyzing emergency case:", error);
-      alert("Une erreur est survenue lors de l'analyse du cas d'urgence.");
-      // For now, show a placeholder on error for UI demo
+      const errorMessage = error instanceof Error ? error.message : "Une erreur inconnue est survenue lors de l'analyse.";
+      setAnalysisError(`Erreur d'analyse : ${errorMessage}`);
+      // Optionally, set a placeholder error analysis for UI consistency
       setEmergencyAnalysis({
         priority: "Erreur",
-        reasoning: "L'analyse a échoué.",
-        recommendedActions: ["Vérifier la console pour les détails."]
+        reasoning: `L'analyse a échoué: ${errorMessage}`,
+        recommendedActions: ["Vérifier la console pour les détails techniques."]
       });
     } finally {
       setIsAnalyzing(false);
@@ -137,22 +132,35 @@ export default function DashboardPage() {
               value={emergencyDescription}
               onChange={(e) => setEmergencyDescription(e.target.value)}
               rows={4}
+              disabled={isAnalyzing}
             />
           </div>
-          <Button onClick={handleAnalyzeEmergency} disabled={isAnalyzing}>
+          <Button onClick={handleAnalyzeEmergency} disabled={isAnalyzing || !emergencyDescription.trim()}>
             {isAnalyzing ? "Analyse en cours..." : "Analyser l'Urgence"}
           </Button>
+          
+          {analysisError && (
+            <Alert variant="destructive" className="mt-4">
+              <Terminal className="h-4 w-4" />
+              <AlertTitle>Erreur d'Analyse</AlertTitle>
+              <AlertDescription>
+                {analysisError}
+              </AlertDescription>
+            </Alert>
+          )}
+
           {emergencyAnalysis && (
             <div className="mt-4 p-4 border rounded-lg bg-muted/50">
               <h3 className="text-lg font-semibold">Résultat de l'Analyse IA :</h3>
               <p><strong>Priorité :</strong> <span className={
                 emergencyAnalysis.priority === "Élevée" ? "text-destructive font-bold" : 
-                emergencyAnalysis.priority === "Moyenne" ? "text-yellow-600 font-bold" : ""
+                emergencyAnalysis.priority === "Moyenne" ? "text-yellow-600 font-bold" : 
+                emergencyAnalysis.priority === "Faible" ? "text-green-600 font-bold" : ""
               }>{emergencyAnalysis.priority}</span></p>
               <p><strong>Justification :</strong> {emergencyAnalysis.reasoning}</p>
               <div>
                 <strong>Actions Recommandées :</strong>
-                <ul className="list-disc list-inside">
+                <ul className="list-disc list-inside space-y-1">
                   {emergencyAnalysis.recommendedActions.map((action, index) => (
                     <li key={index}>{action}</li>
                   ))}
