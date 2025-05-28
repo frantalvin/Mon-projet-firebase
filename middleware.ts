@@ -1,19 +1,15 @@
 import createMiddleware from 'next-intl/middleware';
 
 export default createMiddleware({
-  // Une liste de toutes les locales qui sont prises en charge
+  // A list of all locales that are supported
   locales: ['fr'],
 
-  // Utilisé lorsque aucune locale n'est trouvée
+  // Used when no locale matches
   defaultLocale: 'fr',
-  localePrefix: 'as-needed' // Pour ne pas avoir /fr pour la langue par défaut
+  localePrefix: 'never' // Explicitly set to 'never' as French is the only locale
 });
 
 export const config = {
-  // Correspond à tous les chemins sauf ceux qui commencent par :
-  // - api (chemins API)
-  // - _next/static (fichiers statiques)
-  // - _next/image (optimisation d'images)
-  // - favicon.ico (fichier favicon)
+  // Match only internationalized pathnames
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)']
 };
