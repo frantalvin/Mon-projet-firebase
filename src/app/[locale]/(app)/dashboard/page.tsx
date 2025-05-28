@@ -6,14 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { fr } from "date-fns/locale"; // Importer la locale française
 import { CalendarClock, UsersRound, ClipboardList, CalendarCheck2 } from "lucide-react";
-import Link from "next/link";
+import Link from "next-intl/navigation";
 import { Button } from "@/components/ui/button";
 import type { Appointment } from "@/lib/types";
-import { useLocale } from "next-intl";
+import { useTranslations } from "next-intl";
 
-// TODO: Translate this page content using useTranslations
 export default function DashboardPage() {
+  const t = useTranslations("DashboardPage");
   const { 
     getUpcomingAppointments, 
     isLoading, 
@@ -21,7 +22,6 @@ export default function DashboardPage() {
     getTotalAppointments,
     getAppointmentsTodayCount 
   } = useAppContext();
-  const locale = useLocale();
   
   const upcomingAppointments = getUpcomingAppointments(5); // Show next 5
   const totalPatients = getTotalPatients();
@@ -29,12 +29,12 @@ export default function DashboardPage() {
   const appointmentsTodayCount = getAppointmentsTodayCount();
 
   if (isLoading) {
-    return <div className="flex justify-center items-center h-64">Loading dashboard...</div>; // TODO: Translate
+    return <div className="flex justify-center items-center h-64">{t('loading')}</div>;
   }
 
   const getBadgeVariant = (status: Appointment['status']) => {
     if (status === 'Scheduled') return 'default';
-    if (status === 'Completed') return 'accent';
+    if (status === 'Completed') return 'accent'; // Utilise la variante 'accent' pour 'Terminé'
     return 'destructive';
   };
 
@@ -44,32 +44,32 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Patients</CardTitle> 
+            <CardTitle className="text-sm font-medium">{t('totalPatientsTitle')}</CardTitle> 
             <UsersRound className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalPatients}</div>
-            <p className="text-xs text-muted-foreground">Currently registered in the system</p> 
+            <p className="text-xs text-muted-foreground">{t('totalPatientsDescription')}</p> 
           </CardContent>
         </Card>
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Appointments</CardTitle> 
+            <CardTitle className="text-sm font-medium">{t('totalAppointmentsTitle')}</CardTitle> 
             <ClipboardList className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalAppointments}</div>
-            <p className="text-xs text-muted-foreground">Scheduled, completed, or cancelled</p> 
+            <p className="text-xs text-muted-foreground">{t('totalAppointmentsDescription')}</p> 
           </CardContent>
         </Card>
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Appointments Today</CardTitle> 
+            <CardTitle className="text-sm font-medium">{t('appointmentsTodayTitle')}</CardTitle> 
             <CalendarCheck2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{appointmentsTodayCount}</div>
-            <p className="text-xs text-muted-foreground">Scheduled for today</p> 
+            <p className="text-xs text-muted-foreground">{t('appointmentsTodayDescription')}</p> 
           </CardContent>
         </Card>
       </div>
@@ -77,7 +77,7 @@ export default function DashboardPage() {
       {/* Upcoming Appointments Section */}
       <Card className="shadow-lg">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-xl font-bold">Upcoming Appointments</CardTitle> 
+          <CardTitle className="text-xl font-bold">{t('upcomingAppointmentsTitle')}</CardTitle> 
           <CalendarClock className="h-6 w-6 text-muted-foreground" />
         </CardHeader>
         <CardContent>
@@ -85,25 +85,25 @@ export default function DashboardPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Patient</TableHead> 
-                  <TableHead>Date & Time</TableHead> 
-                  <TableHead>Reason</TableHead> 
-                  <TableHead>Status</TableHead> 
+                  <TableHead>{t('tableHeaderPatient')}</TableHead> 
+                  <TableHead>{t('tableHeaderDateTime')}</TableHead> 
+                  <TableHead>{t('tableHeaderReason')}</TableHead> 
+                  <TableHead>{t('tableHeaderStatus')}</TableHead> 
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {upcomingAppointments.map((appt) => (
                   <TableRow key={appt.id}>
                     <TableCell>
-                      <Link href={`/${locale}/patients/${appt.patientId}`} className="hover:underline text-primary">
+                      <Link href={`/patients/${appt.patientId}`} className="hover:underline text-primary">
                         {appt.patientName}
                       </Link>
                     </TableCell>
-                    <TableCell>{format(new Date(appt.dateTime), "PPpp")}</TableCell>
+                    <TableCell>{format(new Date(appt.dateTime), "PPpp", { locale: fr })}</TableCell>
                     <TableCell>{appt.reason}</TableCell>
                     <TableCell>
                       <Badge variant={getBadgeVariant(appt.status)}>
-                        {appt.status}
+                        {t(`status${appt.status}` as any)}
                       </Badge>
                     </TableCell>
                   </TableRow>
@@ -111,11 +111,11 @@ export default function DashboardPage() {
               </TableBody>
             </Table>
           ) : (
-            <CardDescription>No upcoming appointments.</CardDescription> 
+            <CardDescription>{t('noUpcomingAppointments')}</CardDescription> 
           )}
            <div className="mt-4">
             <Button asChild variant="outline" size="sm">
-                <Link href={`/${locale}/appointments`}>View All Appointments</Link> 
+                <Link href="/appointments">{t('viewAllAppointmentsButton')}</Link> 
             </Button>
            </div>
         </CardContent>
@@ -124,17 +124,17 @@ export default function DashboardPage() {
       {/* Quick Actions Section */}
       <Card className="shadow-lg">
         <CardHeader>
-            <CardTitle className="text-xl font-bold">Quick Actions</CardTitle> 
+            <CardTitle className="text-xl font-bold">{t('quickActionsTitle')}</CardTitle> 
         </CardHeader>
         <CardContent className="flex flex-wrap gap-4">
             <Button asChild>
-                <Link href={`/${locale}/patients/new`}>Register New Patient</Link> 
+                <Link href="/patients/new">{t('registerNewPatientButton')}</Link> 
             </Button>
             <Button variant="outline" asChild>
-                <Link href={`/${locale}/patients`}>View All Patients</Link> 
+                <Link href="/patients">{t('viewAllPatientsButton')}</Link> 
             </Button>
              <Button variant="outline" asChild>
-                <Link href={`/${locale}/appointments`}>Manage Appointments</Link> 
+                <Link href="/appointments">{t('manageAppointmentsButton')}</Link> 
             </Button>
         </CardContent>
       </Card>

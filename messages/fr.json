@@ -1,3 +1,4 @@
+
 {
   "AppLayout": {
     "title": "PatientWise",
@@ -14,6 +15,29 @@
     "light": "Clair",
     "dark": "Sombre",
     "system": "Système"
+  },
+  "DashboardPage": {
+    "loading": "Chargement du tableau de bord...",
+    "totalPatientsTitle": "Total Patients",
+    "totalPatientsDescription": "Actuellement enregistrés dans le système",
+    "totalAppointmentsTitle": "Total Rendez-vous",
+    "totalAppointmentsDescription": "Prévus, terminés ou annulés",
+    "appointmentsTodayTitle": "Rendez-vous Aujourd'hui",
+    "appointmentsTodayDescription": "Prévus pour aujourd'hui",
+    "upcomingAppointmentsTitle": "Prochains Rendez-vous",
+    "tableHeaderPatient": "Patient",
+    "tableHeaderDateTime": "Date & Heure",
+    "tableHeaderReason": "Motif",
+    "tableHeaderStatus": "Statut",
+    "statusScheduled": "Prévu",
+    "statusCompleted": "Terminé",
+    "statusCancelled": "Annulé",
+    "noUpcomingAppointments": "Aucun prochain rendez-vous.",
+    "viewAllAppointmentsButton": "Voir Tous les Rendez-vous",
+    "quickActionsTitle": "Actions Rapides",
+    "registerNewPatientButton": "Enregistrer Nouveau Patient",
+    "viewAllPatientsButton": "Voir Tous les Patients",
+    "manageAppointmentsButton": "Gérer les Rendez-vous"
   },
   "PatientForm": {
     "fullNameLabel": "Nom Complet",
