@@ -96,7 +96,7 @@ function DashboardTabContent() {
           </CardHeader>
           <CardContent className="flex flex-col space-y-2">
             <Button asChild><Link href="/patients/new"><PlusCircle className="mr-2 h-4 w-4" />Nouveau Patient</Link></Button>
-            <Button variant="outline">Nouveau Rendez-vous</Button> {/* TODO: Implement this link/action */}
+            <Button variant="outline" asChild><Link href="/dashboard?tab=appointments&action=new">Nouveau Rendez-vous</Link></Button>
           </CardContent>
         </Card>
       </div>
@@ -338,15 +338,17 @@ function AppointmentsTabContent() {
                       <td className="px-6 py-4">{rdv.medecin}</td>
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          rdv.statut === 'Prévu' ? 'bg-blue-100 text-primary' : 
-                          rdv.statut === 'Terminé' ? 'bg-green-100 text-accent-foreground' : 
-                          rdv.statut === 'Annulé' ? 'bg-red-100 text-destructive' : 'bg-gray-100 text-gray-800'
+                          rdv.statut === 'Prévu' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' : 
+                          rdv.statut === 'Terminé' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 
+                          rdv.statut === 'Annulé' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
                         }`}>
                           {rdv.statut}
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <Button variant="outline" size="sm">Détails</Button>
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={`/appointments/${rdv.id}`}><Eye className="mr-2 h-4 w-4" />Détails</Link>
+                        </Button>
                       </td>
                     </tr>
                   ))}
@@ -462,21 +464,12 @@ function MainAppPage() {
         </div>
         
         <div className="flex-grow overflow-y-auto p-1">
-          <TabsContent value="dashboard" className={currentTab === 'dashboard' ? 'block' : 'hidden'}>
-            {tabContents.dashboard}
-          </TabsContent>
-          <TabsContent value="patients" className={currentTab === 'patients' ? 'block' : 'hidden'}>
-            {tabContents.patients}
-          </TabsContent>
-          <TabsContent value="appointments" className={currentTab === 'appointments' ? 'block' : 'hidden'}>
-            {tabContents.appointments}
-          </TabsContent>
-          <TabsContent value="statistics" className={currentTab === 'statistics' ? 'block' : 'hidden'}>
-            {tabContents.statistics}
-          </TabsContent>
-          <TabsContent value="admin" className={currentTab === 'admin' ? 'block' : 'hidden'}>
-            {tabContents.admin}
-          </TabsContent>
+          {/* Conditional rendering based on currentTab to ensure only one tab content is active */}
+          {currentTab === 'dashboard' && <TabsContent value="dashboard" className="mt-0">{tabContents.dashboard}</TabsContent>}
+          {currentTab === 'patients' && <TabsContent value="patients" className="mt-0">{tabContents.patients}</TabsContent>}
+          {currentTab === 'appointments' && <TabsContent value="appointments" className="mt-0">{tabContents.appointments}</TabsContent>}
+          {currentTab === 'statistics' && <TabsContent value="statistics" className="mt-0">{tabContents.statistics}</TabsContent>}
+          {currentTab === 'admin' && <TabsContent value="admin" className="mt-0">{tabContents.admin}</TabsContent>}
         </div>
       </Tabs>
     </div>
@@ -490,3 +483,5 @@ export default function DashboardPage() {
     </Suspense>
   );
 }
+
+    
