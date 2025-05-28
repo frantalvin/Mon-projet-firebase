@@ -1,12 +1,18 @@
 // THIS FILE SHOULD BE DELETED
 // It is the old, non-localized version.
 // The correct version is in src/app/[locale]/(app)/patients/[id]/page.tsx
+"use client";
+import { notFound } from 'next/navigation';
+import React from 'react';
 
 export default function ObsoletePatientDetailPage() {
+  React.useEffect(() => {
+    // notFound(); // Uncomment to force 404
+  }, []);
   return (
-    <div>
-      <h1>This patient detail page is obsolete and should be deleted.</h1>
-      <p>Please access the application through the localized routes (e.g., /fr/patients/some-id).</p>
+    <div style={{ color: 'red', padding: '20px', border: '2px solid red', margin: '20px' }}>
+      <h1>Cette page (Ancien Détail Patient - <code>src/app/(app)/patients/[id]/page.tsx</code>) est obsolète.</h1>
+      <p>Veuillez la supprimer. Accédez à l'application via les routes localisées (ex: /fr/patients/some-id).</p>
     </div>
   );
 }

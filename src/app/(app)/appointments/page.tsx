@@ -1,12 +1,18 @@
 // THIS FILE SHOULD BE DELETED
 // It is the old, non-localized version.
 // The correct version is in src/app/[locale]/(app)/appointments/page.tsx
+"use client";
+import { notFound } from 'next/navigation';
+import React from 'react';
 
 export default function ObsoleteAppointmentsPage() {
+  React.useEffect(() => {
+    // notFound(); // Uncomment to force 404
+  }, []);
   return (
-    <div>
-      <h1>This appointments page is obsolete and should be deleted.</h1>
-      <p>Please access the application through the localized routes (e.g., /fr/appointments).</p>
+    <div style={{ color: 'red', padding: '20px', border: '2px solid red', margin: '20px' }}>
+      <h1>Cette page (Anciens Rendez-vous - <code>src/app/(app)/appointments/page.tsx</code>) est obsolète.</h1>
+      <p>Veuillez la supprimer. Accédez à l'application via les routes localisées (ex: /fr/appointments).</p>
     </div>
   );
 }

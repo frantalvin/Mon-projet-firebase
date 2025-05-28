@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -10,10 +11,11 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Logo } from "@/components/logo";
-import { Navigation } from "@/components/navigation";
+import { Navigation } from "@/components/navigation"; // Ensure Navigation is used here
 import React from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useTranslations } from 'next-intl';
+// import { LanguageSwitcher } from "@/components/language-switcher"; // Removed as we are French-only for now
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations('AppLayout');
@@ -38,6 +40,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <h1 className="text-2xl font-semibold">{t('title')}</h1>
           </div>
           <div className="flex items-center gap-2">
+            {/* <LanguageSwitcher /> */} {/* Removed as French-only */}
             <ThemeToggle />
           </div>
         </header>

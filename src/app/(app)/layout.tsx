@@ -1,48 +1,34 @@
+// THIS FILE AND THE ENTIRE src/app/(app) DIRECTORY SHOULD BE DELETED
+// It is the old, non-localized version.
+// The correct version is in src/app/[locale]/(app)/layout.tsx
 "use client";
 
-import {
-  SidebarProvider,
-  Sidebar,
-  SidebarHeader,
-  SidebarContent,
-  SidebarFooter,
-  SidebarInset,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
-import { Logo } from "@/components/logo";
-// import { Navigation } from "@/components/navigation"; // Commented out to prevent error
+import { notFound } from 'next/navigation';
 import React from "react";
-import { ThemeToggle } from "@/components/theme-toggle";
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const appTitle = "PatientWise"; // This will not be translated if this layout is hit
+export default function ObsoleteAppLayout({ children }: { children: React.ReactNode }) {
+  // This layout should not be rendered if i18n is set up correctly.
+  // If you see this, it means routing is still hitting the old non-localized layout.
+  // Please ensure the src/app/(app) directory is deleted and all routes
+  // are handled by src/app/[locale]/(app)/...
+
+  React.useEffect(() => {
+    //notFound(); // Uncomment this to force a 404 if this layout is hit.
+               // For now, we'll show a clear message.
+  }, []);
 
   return (
-    <SidebarProvider defaultOpen>
-      <Sidebar collapsible="icon">
-        <SidebarHeader>
-          <Logo />
-        </SidebarHeader>
-        <SidebarContent>
-          {/* <Navigation /> */} {/* Temporarily commented out */}
-          <div>Navigation Placeholder: If you see this, the old layout is active.</div>
-        </SidebarContent>
-        <SidebarFooter className="mt-auto">
-            {/* Placeholder for potential footer items like settings or logout */}
-        </SidebarFooter>
-      </Sidebar>
-      <SidebarInset className="p-2 sm:p-4 md:p-6">
-        <header className="mb-6 flex items-center justify-between rounded-lg border bg-card p-4 shadow-sm">
-          <div className="flex items-center gap-2">
-            <SidebarTrigger className="md:hidden" />
-            <h1 className="text-2xl font-semibold">{appTitle}</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-          </div>
-        </header>
-        <main>{children}</main>
-      </SidebarInset>
-    </SidebarProvider>
+    <div>
+      <h1 style={{ color: 'red', padding: '20px', border: '2px solid red', margin: '20px' }}>
+        ERREUR DE ROUTAGE : ANCIEN LAYOUT ACTIF!
+      </h1>
+      <p style={{ padding: '20px', margin: '20px' }}>
+        Ce layout (<code>src/app/(app)/layout.tsx</code>) est obsolète et ne devrait plus être utilisé.
+        Veuillez vous assurer que le dossier <code>src/app/(app)</code> a été supprimé.
+        Les pages de l'application doivent être servies via la structure <code>src/app/[locale]/(app)/...</code>.
+      </p>
+      <p style={{ padding: '20px', margin: '20px' }}>Contenu enfant (obsolète) :</p>
+      <div>{children}</div>
+    </div>
   );
 }
