@@ -1,0 +1,61 @@
+{
+  "AppLayout": {
+    "title": "PatientWise",
+    "settings": "Paramètres",
+    "logout": "Déconnexion"
+  },
+  "Navigation": {
+    "dashboard": "Tableau de Bord",
+    "patients": "Patients",
+    "appointments": "Rendez-vous"
+  },
+  "ThemeToggle": {
+    "toggleTheme": "Changer de thème",
+    "light": "Clair",
+    "dark": "Sombre",
+    "system": "Système"
+  },
+  "PatientForm": {
+    "fullNameLabel": "Nom Complet",
+    "fullNamePlaceholder": "Jean Dupont",
+    "dobLabel": "Date de Naissance",
+    "pickDate": "Choisir une date",
+    "genderLabel": "Genre",
+    "selectGender": "Sélectionner le genre",
+    "male": "Masculin",
+    "female": "Féminin",
+    "other": "Autre",
+    "contactLabel": "Informations de Contact (Téléphone/Email)",
+    "contactPlaceholder": "0123456789 / jean.dupont@example.com",
+    "addressLabel": "Adresse",
+    "addressPlaceholder": "123 Rue Principale, Ville",
+    "medicalHistoryLabel": "Antécédents Médicaux / Notes",
+    "medicalHistoryPlaceholder": "Antécédents médicaux pertinents, allergies, maladies chroniques, etc.",
+    "aiSummaryHint": "Ceci sera utilisé pour la génération de résumé par l'IA.",
+    "submitRegister": "Enregistrer le Patient",
+    "submitUpdate": "Sauvegarder les Modifications",
+    "submittingRegister": "Enregistrement du patient...",
+    "submittingUpdate": "Mise à jour du patient..."
+  },
+  "AppointmentsPage": {
+    "title": "Tous les Rendez-vous",
+    "description": "Visualisez, recherchez et filtrez tous les rendez-vous planifiés.",
+    "searchPlaceholder": "Rechercher patient ou motif...",
+    "filterByPatient": "Filtrer par Patient",
+    "allPatients": "Tous les Patients",
+    "filterByStatus": "Filtrer par Statut",
+    "allStatuses": "Tous les Statuts",
+    "statusScheduled": "Prévu",
+    "statusCompleted": "Terminé",
+    "statusCancelled": "Annulé",
+    "filterByDate": "Filtrer par Date",
+    "clearDate": "Effacer la Date",
+    "headerPatient": "Patient",
+    "headerDateTime": "Date & Heure",
+    "headerReason": "Motif",
+    "headerStatus": "Statut",
+    "headerActions": "Actions",
+    "viewPatient": "Voir Patient",
+    "noAppointmentsFound": "Aucun rendez-vous trouvé correspondant à vos critères."
+  }
+}

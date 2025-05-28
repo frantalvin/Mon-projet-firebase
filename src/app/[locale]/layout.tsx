@@ -1,12 +1,12 @@
 
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
-import '../globals.css'; // Adjusted path
+import '../globals.css'; // Ajustement du chemin si globals.css est dans src/app
 import { AppProvider } from '@/contexts/app-context';
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
 import { NextIntlClientProvider } from 'next-intl';
-import { getMessages } from 'next-intl/server';
+import { getMessages, getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 
 const geistSans = Geist({
@@ -19,10 +19,10 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
-export const metadata: Metadata = {
-  title: 'PatientWise',
-  description: 'Intelligent Patient Management System',
-};
+// export const metadata: Metadata = { // Metadata peut être générée dynamiquement
+//   title: 'PatientWise',
+//   description: 'Intelligent Patient Management System',
+// };
 
 interface RootLayoutProps {
   children: React.ReactNode;
@@ -31,12 +31,23 @@ interface RootLayoutProps {
   };
 }
 
-// Only French is supported as per current middleware.ts and i18n.ts
+export async function generateMetadata({params: {locale}}: RootLayoutProps): Promise<Metadata> {
+  // Optionnel : Charger les traductions pour le titre si nécessaire
+  // const t = await getTranslations({locale, namespace: 'Metadata'});
+  // return {
+  //   title: t('title')
+  // };
+  return {
+    title: 'PatientWise', // Pour l'instant, gardons un titre statique
+    description: 'Système intelligent de gestion des patients',
+  }
+}
+
 const supportedLocales = ['fr'];
 
 export default async function RootLayout({
   children,
-  params: { locale }, // Destructure locale directly
+  params: { locale },
 }: Readonly<RootLayoutProps>) {
 
   console.log(`[[RootLayout]] Rendering for locale: ${locale}`);
@@ -49,10 +60,10 @@ export default async function RootLayout({
   let messages;
   try {
     console.log(`[[RootLayout]] Attempting to get messages for locale: ${locale} using getMessages({ locale })`);
-    messages = await getMessages({ locale }); // Explicitly pass locale
+    messages = await getMessages({ locale });
     console.log(`[[RootLayout]] Successfully got messages for locale: ${locale}. Message count: ${messages && Object.keys(messages).length}. First key: ${messages && Object.keys(messages)[0]}`);
-    if (messages && Object.keys(messages).length === 0) {
-      console.warn(`[[RootLayout]] getMessages returned an empty object for locale: ${locale}. This might indicate a problem with message loading or an empty messages file.`);
+    if (messages && Object.keys(messages).length === 0 && locale === 'fr') {
+      console.warn(`[[RootLayout]] getMessages returned an empty object for locale: ${locale} (French). This indicates an issue with messages/fr.json or its loading.`);
     }
   } catch (error: any) {
     console.error(`[[RootLayout]] Error calling getMessages for locale ${locale}:`);
@@ -62,7 +73,6 @@ export default async function RootLayout({
     if (error.message && error.message.includes("Couldn't find next-intl config file")) {
         console.error("[[RootLayout]] CRITICAL: next-intl config file (expected at root i18n.ts) was not found or processed by next-intl/server. Ensure i18n.ts exists at the project root and is correctly structured. Also, check tsconfig.json baseUrl if applicable.");
     }
-    // Propagate notFound if getMessages fails
     console.error('[[RootLayout]] Triggering notFound() due to error in getMessages.');
     notFound();
   }
@@ -93,4 +103,3 @@ export default async function RootLayout({
     </html>
   );
 }
-
