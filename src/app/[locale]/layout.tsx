@@ -31,7 +31,7 @@ interface RootLayoutProps {
   };
 }
 
-// Only French is supported as per current middleware.ts and new root i18n.ts
+// Only French is supported as per current middleware.ts and i18n.ts
 const supportedLocales = ['fr'];
 
 export default async function RootLayout({
@@ -39,32 +39,38 @@ export default async function RootLayout({
   params: { locale }, // Destructure locale directly
 }: Readonly<RootLayoutProps>) {
 
-  console.log(`[RootLayout] Rendering for locale: ${locale}`);
+  console.log(`[[RootLayout]] Rendering for locale: ${locale}`);
 
   if (!supportedLocales.includes(locale)) {
-    console.error(`[RootLayout] Invalid locale detected: ${locale}. Calling notFound().`);
+    console.error(`[[RootLayout]] Invalid locale detected in layout: ${locale}. Calling notFound().`);
     notFound();
   }
 
   let messages;
   try {
-    console.log(`[RootLayout] Attempting to get messages for locale: ${locale} using getMessages({ locale })`);
+    console.log(`[[RootLayout]] Attempting to get messages for locale: ${locale} using getMessages({ locale })`);
     messages = await getMessages({ locale }); // Explicitly pass locale
-    console.log(`[RootLayout] Successfully got messages for locale: ${locale}. Message count: ${messages && Object.keys(messages).length}`);
-  } catch (error) {
-    console.error(`[RootLayout] Error calling getMessages for locale ${locale}:`, error);
-    if ((error as Error).message.includes("Couldn't find next-intl config file")) {
-        console.error("[RootLayout] CRITICAL: next-intl config file (expected at root i18n.ts) not found or not processed by next-intl/server. Check build/runtime path resolution. Ensure tsconfig.json baseUrl is set if needed, and that there are no conflicting i18n.ts files.");
+    console.log(`[[RootLayout]] Successfully got messages for locale: ${locale}. Message count: ${messages && Object.keys(messages).length}. First key: ${messages && Object.keys(messages)[0]}`);
+    if (messages && Object.keys(messages).length === 0) {
+      console.warn(`[[RootLayout]] getMessages returned an empty object for locale: ${locale}. This might indicate a problem with message loading.`);
     }
-    // Propagate notFound if getMessages fails (e.g., config not found, or i18n.ts itself calls notFound)
+  } catch (error: any) {
+    console.error(`[[RootLayout]] Error calling getMessages for locale ${locale}:`);
+    console.error("Error Name:", error.name);
+    console.error("Error Message:", error.message);
+    console.error("Error Stack:", error.stack);
+    if (error.message && error.message.includes("Couldn't find next-intl config file")) {
+        console.error("[[RootLayout]] CRITICAL: next-intl config file (expected at root i18n.ts) was not found or processed by next-intl/server. Ensure i18n.ts exists at the project root and is correctly structured. Also, check tsconfig.json baseUrl if applicable.");
+    }
+    // Propagate notFound if getMessages fails
+    console.error('[[RootLayout]] Triggering notFound() due to error in getMessages.');
     notFound();
   }
 
   // This check is important if getMessages could return undefined/null/empty without throwing
-  // for a "config found but no messages for locale" scenario, though i18n.ts should handle that.
-  if (!messages || Object.keys(messages).length === 0) {
-    console.error(`[RootLayout] Messages are undefined, null, or empty for locale: ${locale} after getMessages call. Content:`, messages);
-    console.error(`[RootLayout] This might indicate an issue with the root i18n.ts (e.g., it called notFound()) or the message files for locale: ${locale}. Calling notFound().`);
+  if (!messages) { // Removed Object.keys().length === 0 here, as an empty messages object can be valid if locale has no messages. getMessages should throw if config not found.
+    console.error(`[[RootLayout]] Messages are undefined or null for locale: ${locale} after getMessages call. Content:`, messages);
+    console.error(`[[RootLayout]] This usually indicates an issue with the root i18n.ts (e.g., it called notFound() itself or getMessages failed catastrophically). Calling notFound().`);
     notFound();
   }
 
