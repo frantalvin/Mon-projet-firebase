@@ -17,21 +17,20 @@ import { GenkitError } from 'genkit/error';
 // For deployment (e.g., Firebase App Hosting), configure this environment variable
 // in your backend settings.
 
-if (process.env.GOOGLE_API_KEY) {
-  console.log('[genkit.ts] GOOGLE_API_KEY is set.');
+const apiKeyFromEnv = process.env.GOOGLE_API_KEY;
+
+if (apiKeyFromEnv && apiKeyFromEnv.trim() !== '') {
+  console.log(`[genkit.ts] GOOGLE_API_KEY IS SET in environment. Length: ${apiKeyFromEnv.length}. Initial characters: ${apiKeyFromEnv.substring(0, 5)}...`);
 } else {
-  console.warn(
-    '[genkit.ts] GOOGLE_API_KEY environment variable is NOT SET. AI features requiring Google AI models will not work. Please refer to src/ai/genkit.ts for instructions.'
+  console.error( // Changed to console.error for higher visibility
+    '[genkit.ts] CRITICAL: GOOGLE_API_KEY environment variable is NOT SET or is empty. AI features requiring Google AI models will not work. Please create a .env file in the project root and add GOOGLE_API_KEY=your_api_key_here, then restart the server.'
   );
-  // Depending on the desired behavior, you might throw an error here to halt
-  // initialization if the API key is absolutely critical for the app to start.
-  // For now, we'll just warn, allowing the app to run but with potentially non-functional AI parts.
 }
 
 export const ai = genkit({
   plugins: [
     googleAI({
-      apiKey: process.env.GOOGLE_API_KEY, // Explicitly passing the API key
+      apiKey: apiKeyFromEnv || undefined, // Pass undefined if not set, so plugin might use other auth methods or error clearly
     }),
   ],
   // As per Firebase Studio guidance, logLevel is not set here.
