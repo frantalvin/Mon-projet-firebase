@@ -44,8 +44,9 @@ function DashboardTabContent() {
 
   useEffect(() => {
     // Placeholder data, replace with actual data fetching if needed
-    setActivePatients(125);
-    setAppointmentsToday(8);
+    setActivePatients(125); // This could be fetched from the patients collection size
+    // appointmentsToday could be fetched by querying appointments for today's date
+    setAppointmentsToday(8); 
   }, []);
 
   const handleAnalyzeEmergency = async () => {
@@ -62,15 +63,16 @@ function DashboardTabContent() {
     } catch (error: any) {
       console.error("Error analyzing emergency case:", error);
       let userFriendlyMessage = "Une erreur inconnue est survenue lors de l'analyse.";
-      if (error instanceof Error) {
+      if (error instanceof Error || (error && typeof error.message === 'string')) {
         if (error.message.toLowerCase().includes("not_found") && error.message.toLowerCase().includes("model")) {
           userFriendlyMessage = "Le modèle d'IA spécifié n'a pas été trouvé ou n'est pas accessible.\nConseils :\n1. Vérifiez que votre GOOGLE_API_KEY dans le fichier .env est correcte, active et autorisée à utiliser les modèles Gemini.\n2. Assurez-vous que l'API \"Generative Language\" ou \"Vertex AI\" est activée dans votre projet Google Cloud.\n3. Le modèle demandé (ex: 'gemini-pro') doit être disponible pour votre compte et région.";
         } else if (error.message.toLowerCase().includes("permission_denied")) {
           userFriendlyMessage = "Permission refusée par le service IA. Vérifiez que votre GOOGLE_API_KEY a les droits nécessaires pour utiliser les modèles Gemini.";
         } else if (error.message.toLowerCase().includes("invalid_argument") && error.message.toLowerCase().includes("api key not valid")) {
           userFriendlyMessage = "Clé API invalide. Veuillez vérifier votre GOOGLE_API_KEY dans le fichier .env.";
-        }
-         else {
+        } else if (error.message.toLowerCase().includes("invalid_argument") && error.message.toLowerCase().includes("must supply a `model`")) {
+           userFriendlyMessage = "Argument invalide : Le modèle d'IA doit être spécifié pour l'appel `generate()`. Veuillez vérifier la configuration du flux Genkit.";
+        } else {
           userFriendlyMessage = error.message;
         }
       }
@@ -108,7 +110,7 @@ function DashboardTabContent() {
           </CardHeader>
           <CardContent className="flex flex-col space-y-2">
             <Button asChild><Link href="/patients/new"><PlusCircle className="mr-2 h-4 w-4" />Nouveau Patient</Link></Button>
-            <Button variant="outline" asChild><Link href="/dashboard?tab=appointments&action=new">Nouveau Rendez-vous</Link></Button>
+            <Button variant="outline" asChild><Link href="/appointments/new"><PlusCircle className="mr-2 h-4 w-4" />Nouveau Rendez-vous</Link></Button>
           </CardContent>
         </Card>
       </div>
@@ -333,19 +335,64 @@ function PatientsTabContent() {
   );
 }
 
+interface AppointmentData {
+  id: string;
+  patientName: string; // Could be a patientId to fetch more details
+  doctorName: string; // Could be a staffId
+  dateTime: Timestamp; // Firestore Timestamp
+  status: 'Prévu' | 'Terminé' | 'Annulé' | string; // string for flexibility
+  reason?: string;
+}
+
 function AppointmentsTabContent() {
-  // Placeholder data - replace with actual data fetching and management
-  const appointments = [
-    { id: '1', patient: 'Dupont, Jean', date: '2024-07-25 10:00', medecin: 'Dr. Alpha', statut: 'Prévu' },
-    { id: '2', patient: 'Martin, Sophie', date: '2024-07-25 11:30', medecin: 'Dr. Bravo', statut: 'Terminé' },
-    { id: '3', patient: 'Bernard, Paul', date: '2024-07-26 09:00', medecin: 'Dr. Alpha', statut: 'Annulé' },
-  ];
+  const [appointmentsList, setAppointmentsList] = useState<AppointmentData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      setIsLoading(true);
+      setFetchError(null);
+      try {
+        // Assuming you have an 'appointments' collection
+        const appointmentsCollectionRef = collection(db, "appointments");
+        // Order by date, most recent or upcoming first (adjust as needed)
+        const q = query(appointmentsCollectionRef, orderBy("dateTime", "desc")); 
+        const querySnapshot = await getDocs(q);
+        
+        const fetchedAppointments: AppointmentData[] = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          fetchedAppointments.push({
+            id: doc.id,
+            patientName: data.patientName || "N/A",
+            doctorName: data.doctorName || "N/A",
+            dateTime: data.dateTime, // Already a Firestore Timestamp
+            status: data.status || "Inconnu",
+            reason: data.reason
+          } as AppointmentData);
+        });
+        setAppointmentsList(fetchedAppointments);
+      } catch (error: any) {
+        console.error("Erreur lors de la récupération des rendez-vous :", error);
+        setFetchError(`Impossible de charger la liste des rendez-vous. ${error.message || "Erreur inconnue."} Vérifiez vos règles de sécurité Firestore pour la collection 'appointments'.`);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAppointments();
+  }, []);
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-semibold">Gestion des Rendez-vous</h1>
-        <Button><PlusCircle className="mr-2 h-4 w-4" />Nouveau Rendez-vous</Button>
+        <Button asChild>
+          <Link href="/appointments/new">
+            <PlusCircle className="mr-2 h-4 w-4" />Nouveau Rendez-vous
+          </Link>
+        </Button>
       </div>
       <Card>
         <CardHeader>
@@ -353,7 +400,23 @@ function AppointmentsTabContent() {
           <CardDescription>Visualisez et gérez les rendez-vous planifiés.</CardDescription>
         </CardHeader>
         <CardContent>
-          {appointments.length > 0 ? (
+          {isLoading && <p className="text-center py-8 text-muted-foreground">Chargement des rendez-vous...</p>}
+
+          {!isLoading && fetchError && (
+            <Alert variant="destructive" className="mt-4">
+              <Terminal className="h-4 w-4" />
+              <AlertTitle>Erreur de Chargement</AlertTitle>
+              <AlertDescription>{fetchError}</AlertDescription>
+            </Alert>
+          )}
+
+          {!isLoading && !fetchError && appointmentsList.length === 0 && (
+            <p className="text-muted-foreground text-center py-8">
+              Aucun rendez-vous planifié pour le moment.
+            </p>
+          )}
+
+          {!isLoading && !fetchError && appointmentsList.length > 0 && (
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
                 <thead className="text-xs text-muted-foreground uppercase bg-muted/50">
@@ -366,18 +429,21 @@ function AppointmentsTabContent() {
                   </tr>
                 </thead>
                 <tbody>
-                  {appointments.map((rdv) => (
+                  {appointmentsList.map((rdv) => (
                     <tr key={rdv.id} className="border-b hover:bg-muted/30">
-                      <td className="px-6 py-4 font-medium">{rdv.patient}</td>
-                      <td className="px-6 py-4">{rdv.date}</td>
-                      <td className="px-6 py-4">{rdv.medecin}</td>
+                      <td className="px-6 py-4 font-medium">{rdv.patientName}</td>
+                      <td className="px-6 py-4">
+                        {rdv.dateTime ? format(rdv.dateTime.toDate(), 'dd MMMM yyyy HH:mm', { locale: fr }) : 'N/A'}
+                      </td>
+                      <td className="px-6 py-4">{rdv.doctorName}</td>
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          rdv.statut === 'Prévu' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' :
-                          rdv.statut === 'Terminé' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' :
-                          rdv.statut === 'Annulé' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                          rdv.status === 'Prévu' ? 'bg-primary/20 text-primary' :
+                          rdv.status === 'Terminé' ? 'bg-accent/20 text-accent-foreground dark:text-accent' : // Ensure accent-foreground is readable on accent bg
+                          rdv.status === 'Annulé' ? 'bg-destructive/20 text-destructive' : 
+                          'bg-muted text-muted-foreground' // Default/Unknown status
                         }`}>
-                          {rdv.statut}
+                          {rdv.status}
                         </span>
                       </td>
                       <td className="px-6 py-4">
@@ -390,8 +456,6 @@ function AppointmentsTabContent() {
                 </tbody>
               </table>
             </div>
-          ) : (
-             <p className="text-muted-foreground text-center py-8">Aucun rendez-vous.</p>
           )}
         </CardContent>
       </Card>
@@ -516,3 +580,4 @@ export default function DashboardPage() {
     </Suspense>
   );
 }
+
