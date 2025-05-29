@@ -44,9 +44,6 @@ function HealthReportDialog({ reportData, open, onOpenChange }: { reportData: He
     if (printableContent) {
       const printWindow = window.open('', '_blank');
       printWindow?.document.write('<html><head><title>Formulaire de Santé</title>');
-      // Note: Linking to globals.css for print might be complex depending on deployment.
-      // Inline styles or a dedicated print CSS are often more reliable.
-      // printWindow?.document.write('<link rel="stylesheet" href="/globals.css" type="text/css" media="print"/>'); 
       printWindow?.document.write('<style>@media print { body { margin: 20px; font-family: sans-serif; color: #000; } .no-print { display: none; } h1, h2, h3, h4, p, li, strong { color: #000 !important; } }</style>');
       printWindow?.document.write('</head><body>');
       printWindow?.document.write(printableContent.innerHTML);
@@ -146,7 +143,7 @@ function AiAnalysisDialog({ analysis, error, open, onOpenChange, isLoading }: { 
         <div className="py-4 space-y-3">
           {isLoading && <p className="text-muted-foreground text-center">Analyse en cours...</p>}
           {error && !isLoading && (
-            <Alert variant="destructive">
+            <Alert variant="destructive" className="whitespace-pre-wrap">
               <Terminal className="h-4 w-4" />
               <AlertTitle>Erreur d'Analyse</AlertTitle>
               <UiAlertDescription>{error}</UiAlertDescription>
@@ -202,7 +199,6 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
     setIsReportDialogOpen(true);
   };
 
-  // Données factices pour la démonstration - A remplacer par des données réelles de Firestore
   const patientData = {
     id: patientId,
     nom: `Patient ${patientId}`,
@@ -237,7 +233,7 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
     },
     consultationDate: new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' }),
     symptomes: patientData.symptomesActuels,
-    diagnostic: "Grippe saisonnière (Exemple)", // Pourrait être remplacé par une analyse IA
+    diagnostic: "Grippe saisonnière (Exemple)", 
     traitement: patientData.prescriptions.map(p => ({ medicament: p.medicament, posologie: p.posologie })),
     conseils: "Reposez-vous bien, hydratez-vous abondamment. Surveillez votre température.",
     prochainRendezVous: "Dans 7 jours si pas d'amélioration, ou avant si aggravation.",
@@ -255,14 +251,13 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
       setPatientEmergencyError(errorMsg);
       setPatientEmergencyAnalysis(null);
       setIsAiAnalysisDialogOpen(true);
-      // setIsAnalyzingPatientEmergency(false); // Assurer que l'état est false si on sort tôt
       return;
     }
 
     setIsAnalyzingPatientEmergency(true);
     setPatientEmergencyAnalysis(null);
     setPatientEmergencyError(null);
-    setIsAiAnalysisDialogOpen(true); // Open dialog to show loading/result
+    setIsAiAnalysisDialogOpen(true); 
 
     try {
       toast.info("Analyse IA de l'urgence en cours...");
@@ -273,9 +268,21 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
       toast.success("Analyse IA terminée avec succès.");
     } catch (error: any) {
       console.error("[PatientDetailPage] Error analyzing patient emergency case:", error);
-      const errorMessage = error.message || "Une erreur inconnue est survenue lors de l'analyse IA.";
-      setPatientEmergencyError(`Erreur d'analyse IA : ${errorMessage}`);
-      toast.error("Erreur lors de l'analyse IA.", { description: errorMessage });
+      let userFriendlyMessage = "Une erreur inconnue est survenue lors de l'analyse IA.";
+       if (error instanceof Error) {
+        if (error.message.toLowerCase().includes("not_found") && error.message.toLowerCase().includes("model")) {
+          userFriendlyMessage = "Le modèle d'IA spécifié n'a pas été trouvé ou n'est pas accessible.\nConseils :\n1. Vérifiez votre GOOGLE_API_KEY dans le fichier .env.\n2. Assurez-vous que l'API \"Generative Language\" ou \"Vertex AI\" est activée dans Google Cloud.\n3. Le modèle demandé (ex: 'gemini-pro') doit être disponible.";
+        } else if (error.message.toLowerCase().includes("permission_denied")) {
+            userFriendlyMessage = "Permission refusée par le service IA. Vérifiez votre GOOGLE_API_KEY et les permissions associées.";
+        } else if (error.message.toLowerCase().includes("invalid_argument") && error.message.toLowerCase().includes("api key not valid")) {
+          userFriendlyMessage = "Clé API invalide. Veuillez vérifier votre GOOGLE_API_KEY dans le fichier .env.";
+        }
+         else {
+          userFriendlyMessage = error.message;
+        }
+      }
+      setPatientEmergencyError(`Erreur d'analyse IA : ${userFriendlyMessage}`);
+      toast.error("Erreur lors de l'analyse IA.", { description: userFriendlyMessage });
     } finally {
       console.log('[PatientDetailPage] handleEmergencyAI finally block. Setting isAnalyzingPatientEmergency to false.');
       setIsAnalyzingPatientEmergency(false);
@@ -283,8 +290,6 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
   };
 
   if (!patientId) {
-    // Gérer le cas où patientId n'est pas encore résolu, bien que `use` devrait s'en charger.
-    // Ou si la navigation a échoué et qu'on arrive ici sans ID valide.
     console.error("[PatientDetailPage] patientId is not available. This should not happen if routing is correct.");
     return <div className="p-4">Chargement des détails du patient ou ID patient manquant...</div>;
   }
@@ -301,7 +306,7 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
           <Button 
             onClick={handleEmergencyAI} 
             variant="destructive" 
-            disabled={isAnalyzingPatientEmergency}
+            disabled={isAnalyzingPatientEmergency || !patientData.symptomesActuels || patientData.symptomesActuels.length < 10}
           >
             <BrainCircuit className="mr-2 h-5 w-5" />
             {isAnalyzingPatientEmergency ? "Analyse en cours..." : "Évaluer Urgence (IA)"}
@@ -309,7 +314,6 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
         </div>
       </div>
 
-      {/* ... reste du JSX pour afficher les informations du patient ... */}
       <div className="grid md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>

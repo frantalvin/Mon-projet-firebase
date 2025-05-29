@@ -49,8 +49,8 @@ function DashboardTabContent() {
   }, []);
 
   const handleAnalyzeEmergency = async () => {
-    if (!emergencyDescription.trim()) {
-      setAnalysisError("Veuillez décrire le cas d'urgence.");
+    if (!emergencyDescription.trim() || emergencyDescription.length < 10) {
+      setAnalysisError("Veuillez décrire le cas d'urgence (min. 10 caractères).");
       return;
     }
     setIsAnalyzing(true);
@@ -61,8 +61,20 @@ function DashboardTabContent() {
       setEmergencyAnalysis(result);
     } catch (error: any) {
       console.error("Error analyzing emergency case:", error);
-      const errorMessage = error.message || "Une erreur inconnue est survenue lors de l'analyse.";
-      setAnalysisError(`Erreur d'analyse : ${errorMessage}`);
+      let userFriendlyMessage = "Une erreur inconnue est survenue lors de l'analyse.";
+      if (error instanceof Error) {
+        if (error.message.toLowerCase().includes("not_found") && error.message.toLowerCase().includes("model")) {
+          userFriendlyMessage = "Le modèle d'IA spécifié n'a pas été trouvé ou n'est pas accessible.\nConseils :\n1. Vérifiez que votre GOOGLE_API_KEY dans le fichier .env est correcte, active et autorisée à utiliser les modèles Gemini.\n2. Assurez-vous que l'API \"Generative Language\" ou \"Vertex AI\" est activée dans votre projet Google Cloud.\n3. Le modèle demandé (ex: 'gemini-pro') doit être disponible pour votre compte et région.";
+        } else if (error.message.toLowerCase().includes("permission_denied")) {
+          userFriendlyMessage = "Permission refusée par le service IA. Vérifiez que votre GOOGLE_API_KEY a les droits nécessaires pour utiliser les modèles Gemini.";
+        } else if (error.message.toLowerCase().includes("invalid_argument") && error.message.toLowerCase().includes("api key not valid")) {
+          userFriendlyMessage = "Clé API invalide. Veuillez vérifier votre GOOGLE_API_KEY dans le fichier .env.";
+        }
+         else {
+          userFriendlyMessage = error.message;
+        }
+      }
+      setAnalysisError(`Erreur d'analyse : ${userFriendlyMessage}`);
     } finally {
       setIsAnalyzing(false);
     }
@@ -145,7 +157,7 @@ function DashboardTabContent() {
           </Button>
 
           {analysisError && (
-            <Alert variant="destructive" className="mt-4">
+            <Alert variant="destructive" className="mt-4 whitespace-pre-wrap">
               <Terminal className="h-4 w-4" />
               <AlertTitle>Erreur d'Analyse</AlertTitle>
               <AlertDescription>{analysisError}</AlertDescription>
@@ -213,10 +225,10 @@ function PatientsTabContent() {
             id: doc.id,
             firstName: data.firstName,
             lastName: data.lastName,
-            dob: data.dob, // Assurez-vous que 'dob' est bien une chaîne 'yyyy-MM-dd'
+            dob: data.dob, 
             phone: data.phone,
             email: data.email,
-            createdAt: data.createdAt // Doit être un Firestore Timestamp
+            createdAt: data.createdAt 
           } as PatientData);
         });
         console.log("[PatientsTabContent] Patients récupérés et formatés:", fetchedPatients);
@@ -455,31 +467,30 @@ function MainAppPage() {
   return (
     <div className="flex flex-col h-full">
       <Tabs defaultValue={currentTab} value={currentTab} className="flex-grow flex flex-col">
-        {/* Wrapper for horizontal scrolling and sticky positioning */}
         <div className="overflow-x-auto sticky top-0 bg-background z-10 shadow-sm border-b mb-4">
           <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-max">
             <TabsTrigger value="dashboard" asChild>
-              <Link href="/dashboard?tab=dashboard" className="px-3 py-1.5 text-sm font-medium flex items-center justify-center gap-2">
+              <Link href="/dashboard?tab=dashboard" className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm gap-2">
                 <BrainCircuit className="h-4 w-4" />Tableau de Bord
               </Link>
             </TabsTrigger>
             <TabsTrigger value="patients" asChild>
-              <Link href="/dashboard?tab=patients" className="px-3 py-1.5 text-sm font-medium flex items-center justify-center gap-2">
+              <Link href="/dashboard?tab=patients" className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm gap-2">
                 <Users className="h-4 w-4" />Patients
               </Link>
             </TabsTrigger>
             <TabsTrigger value="appointments" asChild>
-              <Link href="/dashboard?tab=appointments" className="px-3 py-1.5 text-sm font-medium flex items-center justify-center gap-2">
+              <Link href="/dashboard?tab=appointments" className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm gap-2">
                 <CalendarDays className="h-4 w-4" />Rendez-vous
               </Link>
             </TabsTrigger>
             <TabsTrigger value="statistics" asChild>
-              <Link href="/dashboard?tab=statistics" className="px-3 py-1.5 text-sm font-medium flex items-center justify-center gap-2">
+              <Link href="/dashboard?tab=statistics" className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm gap-2">
                 <LineChartIcon className="h-4 w-4" />Statistiques
               </Link>
             </TabsTrigger>
             <TabsTrigger value="admin" asChild>
-              <Link href="/dashboard?tab=admin" className="px-3 py-1.5 text-sm font-medium flex items-center justify-center gap-2">
+              <Link href="/dashboard?tab=admin" className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm gap-2">
                 <Shield className="h-4 w-4" />Admin
               </Link>
             </TabsTrigger>
@@ -487,7 +498,6 @@ function MainAppPage() {
         </div>
 
         <div className="flex-grow overflow-y-auto p-1">
-          {/* Conditional rendering based on currentTab to ensure only one tab content is active */}
           {currentTab === 'dashboard' && <TabsContent value="dashboard" className="mt-0">{tabContents.dashboard}</TabsContent>}
           {currentTab === 'patients' && <TabsContent value="patients" className="mt-0">{tabContents.patients}</TabsContent>}
           {currentTab === 'appointments' && <TabsContent value="appointments" className="mt-0">{tabContents.appointments}</TabsContent>}
@@ -506,5 +516,3 @@ export default function DashboardPage() {
     </Suspense>
   );
 }
-
-    
