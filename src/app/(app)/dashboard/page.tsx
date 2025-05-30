@@ -217,68 +217,9 @@ interface PatientData {
   createdAt?: Timestamp; 
 }
 
+// Temporarily simplified PatientsTabContent for debugging
 function PatientsTabContent() {
-  const [patientsList, setPatientsList] = useState<PatientData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-
-  useEffect(() => {
-    console.log("[PatientsTabContent] useEffect: Démarrage de la récupération des patients.");
-    const fetchPatients = async () => {
-      setIsLoading(true);
-      setFetchError(null);
-      try {
-        const patientsCollectionRef = collection(db, "patients");
-        const q = query(patientsCollectionRef, orderBy("createdAt", "desc"));
-        console.log("[PatientsTabContent] Requête Firestore créée:", q);
-        const querySnapshot = await getDocs(q);
-        console.log(`[PatientsTabContent] Snapshot reçu. Nombre de documents: ${querySnapshot.size}`);
-
-        const fetchedPatients: PatientData[] = [];
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          console.log(`[PatientsTabContent] Document ID: ${doc.id}, Données:`, data);
-          fetchedPatients.push({
-            id: doc.id,
-            firstName: data.firstName,
-            lastName: data.lastName,
-            dob: data.dob, 
-            phone: data.phone,
-            email: data.email,
-            createdAt: data.createdAt 
-          } as PatientData);
-        });
-        console.log("[PatientsTabContent] Patients récupérés et formatés:", fetchedPatients);
-        setPatientsList(fetchedPatients);
-      } catch (error: any) {
-        console.error("[PatientsTabContent] Erreur lors de la récupération des patients :", error);
-        let errorMessage = `Impossible de charger la liste des patients. ${error.message || "Erreur inconnue."}`;
-        if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes("permission"))) {
-            errorMessage += " Veuillez vérifier vos règles de sécurité Firestore pour la collection 'patients' et vous assurer que l'utilisateur authentifié a les droits de lecture.";
-        }
-        setFetchError(errorMessage);
-      } finally {
-        setIsLoading(false);
-        console.log("[PatientsTabContent] Fin de la récupération des patients.");
-      }
-    };
-
-    fetchPatients();
-  }, []);
-
-  const filteredPatients = useMemo(() => {
-    console.log("[PatientsTabContent] useMemo: Recalcul des patients filtrés. Terme de recherche:", searchTerm);
-    if (!searchTerm) {
-      return patientsList;
-    }
-    const lowercasedSearchTerm = searchTerm.toLowerCase();
-    return patientsList.filter(patient =>
-      (patient.firstName?.toLowerCase() || '').includes(lowercasedSearchTerm) ||
-      (patient.lastName?.toLowerCase() || '').includes(lowercasedSearchTerm)
-    );
-  }, [searchTerm, patientsList]);
-
+  console.log("[PatientsTabContent] Rendering simplified placeholder.");
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -291,76 +232,19 @@ function PatientsTabContent() {
         <CardHeader>
           <CardTitle>Liste des Patients</CardTitle>
           <CardDescription>
-            Visualisez et gérez les dossiers patients. Recherche par nom ou prénom.
+            Contenu de la liste des patients temporairement désactivé pour débogage.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-4">
-            <Label htmlFor="patient-search" className="sr-only">Rechercher un patient</Label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="patient-search"
-                type="search"
-                placeholder="Rechercher par nom ou prénom..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-full md:w-1/2 lg:w-1/3"
-              />
-            </div>
-          </div>
-
-          {isLoading && <p className="text-center py-8 text-muted-foreground">Chargement de la liste des patients...</p>}
-          
-          {!isLoading && fetchError && (
-            <Alert variant="destructive" className="mt-4">
-              <Terminal className="h-4 w-4" />
-              <AlertTitle>Erreur de Chargement</AlertTitle>
-              <AlertDescription>{fetchError}</AlertDescription>
-            </Alert>
-          )}
-
-          {!isLoading && !fetchError && patientsList.length === 0 && (
-             <p className="text-muted-foreground text-center py-8">
-              Aucun patient enregistré pour le moment. Cliquez sur "Nouveau Patient" pour en ajouter un.
-            </p>
-          )}
-
-          {!isLoading && !fetchError && patientsList.length > 0 && filteredPatients.length === 0 && searchTerm && (
-             <p className="text-muted-foreground text-center py-8">
-              Aucun patient trouvé pour le terme de recherche "{searchTerm}".
-            </p>
-          )}
-
-          {!isLoading && !fetchError && filteredPatients.length > 0 && (
-            <ul className="space-y-3">
-              {filteredPatients.map((patient) => {
-                const patientDetailUrl = `/patients/${patient.id}`;
-                console.log(`[PatientsTabContent] Rendering patient: ${patient.firstName} ${patient.lastName}, Link Href: ${patientDetailUrl}`);
-                return (
-                  <li key={patient.id} className="p-4 border rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center hover:bg-muted/50">
-                    <div className="mb-2 sm:mb-0">
-                      <h3 className="font-semibold">{patient.lastName}, {patient.firstName}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Date de Naissance: {patient.dob ? format(new Date(patient.dob), 'dd MMMM yyyy', { locale: fr }) : 'N/A'}
-                      </p>
-                    </div>
-                    <div className="flex space-x-2 mt-2 sm:mt-0">
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href={patientDetailUrl}><Eye className="mr-2 h-4 w-4" />Voir Fiche</Link>
-                      </Button>
-                       {/* Bouton "Nouv. Consultation" supprimé d'ici */}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+          <p className="text-center py-8 text-muted-foreground">
+            La liste des patients est en cours de maintenance.
+          </p>
         </CardContent>
       </Card>
     </div>
   );
 }
+
 
 interface AppointmentData {
   id: string;
@@ -421,7 +305,6 @@ function AppointmentsTabContent() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-semibold">Gestion des Rendez-vous</h1>
-        {/* Le bouton "Nouveau Rendez-vous" peut être ajouté ici et lié à /dashboard?tab=new-appointment ou une page dédiée */}
         <Button asChild>
           <Link href="/dashboard?tab=new-medical-record"> 
             <PlusCircle className="mr-2 h-4 w-4" />Nouv. Dossier Médical
@@ -906,3 +789,4 @@ export default function DashboardPage() {
   );
 }
     
+
