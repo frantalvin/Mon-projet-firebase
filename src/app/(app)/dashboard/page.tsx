@@ -13,10 +13,10 @@ import { useState, useEffect, Suspense, useMemo } from "react";
 import type { EmergencyCaseAnalysis } from "@/ai/flows/emergency-flow";
 import { analyzeEmergencyCase } from "@/ai/flows/emergency-flow";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, BrainCircuit, Users, CalendarDays, LineChartIcon, Shield, PlusCircle, Eye, Search } from "lucide-react";
+import { Terminal, BrainCircuit, Users, CalendarDays, LineChartIcon, ShieldCheck, PlusCircle, Eye, Search, FileText } from "lucide-react"; // Added FileText
 import Link from 'next/link';
 import { db } from "@/lib/firebase";
-import { collection, getDocs, query, orderBy, Timestamp } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, Timestamp, doc, getDoc } from "firebase/firestore"; // Added doc, getDoc
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -43,10 +43,42 @@ function DashboardTabContent() {
   const [appointmentsToday, setAppointmentsToday] = useState<number | null>(null);
 
   useEffect(() => {
-    // Placeholder data, replace with actual data fetching if needed
-    setActivePatients(125); // This could be fetched from the patients collection size
-    // appointmentsToday could be fetched by querying appointments for today's date
-    setAppointmentsToday(8); 
+    const fetchDashboardData = async () => {
+      try {
+        // Fetch active patients count
+        const patientsSnapshot = await getDocs(collection(db, "patients"));
+        setActivePatients(patientsSnapshot.size);
+
+        // Fetch appointments for today
+        const today = new Date();
+        const startOfToday = new Date(today.setHours(0, 0, 0, 0));
+        const endOfToday = new Date(today.setHours(23, 59, 59, 999));
+        
+        // This query might need adjustment if 'dateTime' is not directly comparable
+        // or if you need a more complex query for "today's" appointments.
+        // For simplicity, assuming 'dateTime' is a Firestore Timestamp.
+        // This query will be difficult without composite indexes if you query ranges on different fields.
+        // A simpler approach for "appointmentsToday" might be to fetch all upcoming and filter client-side,
+        // or to have a dedicated field/collection for daily summaries if performance is critical.
+        // For now, let's keep it simple; this might require a Firestore index.
+        /*
+        const appointmentsQuery = query(
+          collection(db, "appointments"),
+          where("dateTime", ">=", Timestamp.fromDate(startOfToday)),
+          where("dateTime", "<=", Timestamp.fromDate(endOfToday))
+        );
+        const appointmentsSnapshot = await getDocs(appointmentsQuery);
+        setAppointmentsToday(appointmentsSnapshot.size);
+        */
+        // Placeholder for appointments today as the query above is complex
+        setAppointmentsToday(5); // Placeholder
+
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+        // Handle error appropriately
+      }
+    };
+    fetchDashboardData();
   }, []);
 
   const handleAnalyzeEmergency = async () => {
@@ -63,15 +95,13 @@ function DashboardTabContent() {
     } catch (error: any) {
       console.error("Error analyzing emergency case:", error);
       let userFriendlyMessage = "Une erreur inconnue est survenue lors de l'analyse.";
-      if (error instanceof Error || (error && typeof error.message === 'string')) {
-        if (error.message.toLowerCase().includes("not_found") && error.message.toLowerCase().includes("model")) {
-          userFriendlyMessage = "Le modèle d'IA spécifié n'a pas été trouvé ou n'est pas accessible.\nConseils :\n1. Vérifiez que votre GOOGLE_API_KEY dans le fichier .env est correcte, active et autorisée à utiliser les modèles Gemini.\n2. Assurez-vous que l'API \"Generative Language\" ou \"Vertex AI\" est activée dans votre projet Google Cloud.\n3. Le modèle demandé (ex: 'gemini-pro') doit être disponible pour votre compte et région.";
-        } else if (error.message.toLowerCase().includes("permission_denied")) {
-          userFriendlyMessage = "Permission refusée par le service IA. Vérifiez que votre GOOGLE_API_KEY a les droits nécessaires pour utiliser les modèles Gemini.";
-        } else if (error.message.toLowerCase().includes("invalid_argument") && error.message.toLowerCase().includes("api key not valid")) {
-          userFriendlyMessage = "Clé API invalide. Veuillez vérifier votre GOOGLE_API_KEY dans le fichier .env.";
-        } else if (error.message.toLowerCase().includes("invalid_argument") && error.message.toLowerCase().includes("must supply a `model`")) {
-           userFriendlyMessage = "Argument invalide : Le modèle d'IA doit être spécifié pour l'appel `generate()`. Veuillez vérifier la configuration du flux Genkit.";
+       if (error instanceof Error || (error && typeof error.message === 'string')) {
+        if (error.message.includes("NOT_FOUND") && error.message.includes("Model")) {
+          userFriendlyMessage = `Le modèle d'IA spécifié (${(error.message.match(/Model '(.*)' not found/) || [])[1] || 'inconnu'}) n'a pas été trouvé ou n'est pas accessible.\nConseils :\n1. Vérifiez que votre GOOGLE_API_KEY dans le fichier .env est correcte, active et autorisée à utiliser les modèles Gemini.\n2. Assurez-vous que l'API "Generative Language" ou "Vertex AI" est activée dans votre projet Google Cloud.\n3. Le modèle demandé doit être disponible pour votre compte et région.`;
+        } else if (error.message.includes("PERMISSION_DENIED") || error.message.includes("API key not valid")) {
+          userFriendlyMessage = "Permission refusée par le service IA ou clé API invalide. Vérifiez votre GOOGLE_API_KEY et ses droits.";
+        } else if (error.message.includes("INVALID_ARGUMENT") && error.message.includes("Must supply a `model`")) {
+           userFriendlyMessage = "Argument invalide : Le modèle d'IA doit être spécifié pour l'appel. Vérifiez la configuration du flux Genkit.";
         } else {
           userFriendlyMessage = error.message;
         }
@@ -89,7 +119,7 @@ function DashboardTabContent() {
         <Card>
           <CardHeader>
             <CardTitle>Patients Actifs</CardTitle>
-            <CardDescription>Nombre total de patients actifs.</CardDescription>
+            <CardDescription>Nombre total de patients enregistrés.</CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-4xl font-bold">{activePatients !== null ? activePatients : "Chargement..."}</p>
@@ -98,7 +128,7 @@ function DashboardTabContent() {
         <Card>
           <CardHeader>
             <CardTitle>Rendez-vous du Jour</CardTitle>
-            <CardDescription>Nombre de rendez-vous prévus aujourd'hui.</CardDescription>
+            <CardDescription>Nombre de rendez-vous prévus aujourd'hui (donnée exemple).</CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-4xl font-bold">{appointmentsToday !== null ? appointmentsToday : "Chargement..."}</p>
@@ -118,7 +148,7 @@ function DashboardTabContent() {
       <Card className="col-span-1 lg:col-span-2">
         <CardHeader>
           <CardTitle>Rendez-vous Hebdomadaires</CardTitle>
-          <CardDescription>Aperçu des rendez-vous pour la semaine en cours.</CardDescription>
+          <CardDescription>Aperçu des rendez-vous pour la semaine en cours (données exemples).</CardDescription>
         </CardHeader>
         <CardContent className="h-[300px] w-full">
           <ResponsiveContainer width="100%" height="100%">
@@ -171,8 +201,8 @@ function DashboardTabContent() {
               <h3 className="text-lg font-semibold">Résultat de l'Analyse IA :</h3>
               <p><strong>Priorité :</strong> <span className={
                 emergencyAnalysis.priority === "Élevée" ? "text-destructive font-bold" :
-                emergencyAnalysis.priority === "Moyenne" ? "text-yellow-600 font-bold" :
-                emergencyAnalysis.priority === "Faible" ? "text-green-600 font-bold" : ""
+                emergencyAnalysis.priority === "Moyenne" ? "text-yellow-600 font-bold" : // Note: text-yellow-600 might not be themed
+                emergencyAnalysis.priority === "Faible" ? "text-green-600 font-bold" : "" // Note: text-green-600 might not be themed
               }>{emergencyAnalysis.priority}</span></p>
               <p><strong>Justification :</strong> {emergencyAnalysis.reasoning}</p>
               <div>
@@ -237,7 +267,11 @@ function PatientsTabContent() {
         setPatientsList(fetchedPatients);
       } catch (error: any) {
         console.error("[PatientsTabContent] Erreur lors de la récupération des patients :", error);
-        setFetchError(`Impossible de charger la liste des patients. ${error.message || "Erreur inconnue."} Avez-vous vérifié vos règles de sécurité Firestore pour la lecture de la collection 'patients' ?`);
+        let errorMessage = `Impossible de charger la liste des patients. ${error.message || "Erreur inconnue."}`;
+        if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes("permission"))) {
+            errorMessage += " Veuillez vérifier vos règles de sécurité Firestore pour la collection 'patients' et vous assurer que l'utilisateur authentifié a les droits de lecture.";
+        }
+        setFetchError(errorMessage);
       } finally {
         setIsLoading(false);
         console.log("[PatientsTabContent] Fin de la récupération des patients.");
@@ -248,7 +282,7 @@ function PatientsTabContent() {
   }, []);
 
   const filteredPatients = useMemo(() => {
-    console.log("[PatientsTabContent] useMemo: Recalcul des patients filtrés. Terme de recherche:", searchTerm, "Liste de base:", patientsList);
+    console.log("[PatientsTabContent] useMemo: Recalcul des patients filtrés. Terme de recherche:", searchTerm);
     if (!searchTerm) {
       return patientsList;
     }
@@ -314,19 +348,23 @@ function PatientsTabContent() {
 
           {!isLoading && !fetchError && filteredPatients.length > 0 && (
             <ul className="space-y-3">
-              {filteredPatients.map((patient) => (
-                <li key={patient.id} className="p-4 border rounded-lg flex justify-between items-center hover:bg-muted/50">
-                  <div>
-                    <h3 className="font-semibold">{patient.lastName}, {patient.firstName}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Date de Naissance: {patient.dob ? format(new Date(patient.dob), 'dd MMMM yyyy', { locale: fr }) : 'N/A'}
-                    </p>
-                  </div>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href={`/patients/${patient.id}`}><Eye className="mr-2 h-4 w-4" />Voir Fiche</Link>
-                  </Button>
-                </li>
-              ))}
+              {filteredPatients.map((patient) => {
+                const patientDetailUrl = `/patients/${patient.id}`;
+                console.log(`[PatientsTabContent] Rendering patient: ${patient.firstName} ${patient.lastName}, Link Href: ${patientDetailUrl}`);
+                return (
+                  <li key={patient.id} className="p-4 border rounded-lg flex justify-between items-center hover:bg-muted/50">
+                    <div>
+                      <h3 className="font-semibold">{patient.lastName}, {patient.firstName}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Date de Naissance: {patient.dob ? format(new Date(patient.dob), 'dd MMMM yyyy', { locale: fr }) : 'N/A'}
+                      </p>
+                    </div>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={patientDetailUrl}><Eye className="mr-2 h-4 w-4" />Voir Fiche</Link>
+                    </Button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </CardContent>
@@ -353,12 +391,12 @@ function AppointmentsTabContent() {
     const fetchAppointments = async () => {
       setIsLoading(true);
       setFetchError(null);
+      console.log("[AppointmentsTabContent] Démarrage de la récupération des rendez-vous.");
       try {
-        // Assuming you have an 'appointments' collection
         const appointmentsCollectionRef = collection(db, "appointments");
-        // Order by date, most recent or upcoming first (adjust as needed)
         const q = query(appointmentsCollectionRef, orderBy("dateTime", "desc")); 
         const querySnapshot = await getDocs(q);
+        console.log(`[AppointmentsTabContent] Snapshot des rendez-vous reçu. Nombre de documents: ${querySnapshot.size}`);
         
         const fetchedAppointments: AppointmentData[] = [];
         querySnapshot.forEach((doc) => {
@@ -367,17 +405,23 @@ function AppointmentsTabContent() {
             id: doc.id,
             patientName: data.patientName || "N/A",
             doctorName: data.doctorName || "N/A",
-            dateTime: data.dateTime, // Already a Firestore Timestamp
+            dateTime: data.dateTime,
             status: data.status || "Inconnu",
             reason: data.reason
           } as AppointmentData);
         });
         setAppointmentsList(fetchedAppointments);
+        console.log("[AppointmentsTabContent] Rendez-vous récupérés et formatés:", fetchedAppointments);
       } catch (error: any) {
-        console.error("Erreur lors de la récupération des rendez-vous :", error);
-        setFetchError(`Impossible de charger la liste des rendez-vous. ${error.message || "Erreur inconnue."} Vérifiez vos règles de sécurité Firestore pour la collection 'appointments'.`);
+        console.error("[AppointmentsTabContent] Erreur lors de la récupération des rendez-vous :", error);
+        let errorMessage = `Impossible de charger la liste des rendez-vous. ${error.message || "Erreur inconnue."}`;
+        if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes("permission"))) {
+            errorMessage += " Veuillez vérifier vos règles de sécurité Firestore pour la collection 'appointments' et vous assurer que l'utilisateur authentifié a les droits de lecture.";
+        }
+        setFetchError(errorMessage);
       } finally {
         setIsLoading(false);
+         console.log("[AppointmentsTabContent] Fin de la récupération des rendez-vous.");
       }
     };
 
@@ -412,7 +456,7 @@ function AppointmentsTabContent() {
 
           {!isLoading && !fetchError && appointmentsList.length === 0 && (
             <p className="text-muted-foreground text-center py-8">
-              Aucun rendez-vous planifié pour le moment.
+              Aucun rendez-vous planifié pour le moment. Cliquez sur "Nouveau Rendez-vous" pour en ajouter un.
             </p>
           )}
 
@@ -439,9 +483,9 @@ function AppointmentsTabContent() {
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                           rdv.status === 'Prévu' ? 'bg-primary/20 text-primary' :
-                          rdv.status === 'Terminé' ? 'bg-accent/20 text-accent-foreground dark:text-accent' : // Ensure accent-foreground is readable on accent bg
+                          rdv.status === 'Terminé' ? 'bg-accent/20 text-accent-foreground dark:text-accent' : 
                           rdv.status === 'Annulé' ? 'bg-destructive/20 text-destructive' : 
-                          'bg-muted text-muted-foreground' // Default/Unknown status
+                          'bg-muted text-muted-foreground'
                         }`}>
                           {rdv.status}
                         </span>
@@ -475,7 +519,7 @@ function StatisticsTabContent() {
       <Card>
         <CardHeader>
           <CardTitle>Maladies les plus fréquentes</CardTitle>
-          <CardDescription>Distribution des maladies diagnostiquées.</CardDescription>
+          <CardDescription>Distribution des maladies diagnostiquées (données exemples).</CardDescription>
         </CardHeader>
         <CardContent className="h-[400px] w-full">
           <ResponsiveContainer width="100%" height="100%">
@@ -555,7 +599,7 @@ function MainAppPage() {
             </TabsTrigger>
             <TabsTrigger value="admin" asChild>
               <Link href="/dashboard?tab=admin" className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm gap-2">
-                <Shield className="h-4 w-4" />Admin
+                <ShieldCheck className="h-4 w-4" />Admin
               </Link>
             </TabsTrigger>
           </TabsList>
@@ -580,4 +624,3 @@ export default function DashboardPage() {
     </Suspense>
   );
 }
-

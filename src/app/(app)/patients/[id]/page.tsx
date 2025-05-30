@@ -4,7 +4,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BrainCircuit, FileText, Printer, Terminal, AlertTriangle, Loader2, Eye } from "lucide-react"; // Added Eye
+import { BrainCircuit, FileText, Printer, Terminal, AlertTriangle, Loader2, Eye, ArrowLeft } from "lucide-react";
 import { use, useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -15,7 +15,7 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, orderBy, getDocs, Timestamp } from "firebase/firestore";
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import Link from "next/link"; // Added Link
+import Link from "next/link";
 
 interface PatientFirestoreData {
   id: string;
@@ -27,6 +27,8 @@ interface PatientFirestoreData {
   phone?: string;
   email?: string;
   createdAt?: Timestamp;
+  // Add other fields as needed from your Firestore structure
+  // e.g., numSecu, groupeSanguin, antecedents, allergies, etc.
 }
 
 interface MedicalRecordFirestoreData {
@@ -36,9 +38,14 @@ interface MedicalRecordFirestoreData {
   motifConsultation?: string;
   diagnostic?: string;
   symptomes?: string;
-  traitementPrescrit?: string;
+  traitementPrescrit?: string; // Could be an array of objects if detailed
   notesMedecin?: string;
   createdAt?: Timestamp;
+  // Potentially add fields for:
+  // - doctorId/doctorName
+  // - typeDeConsultation (e.g., "Routine", "Urgence", "Suivi")
+  // - examenPhysique (object with details)
+  // - resultatsExamens (array of links or structured data)
 }
 
 
@@ -74,7 +81,8 @@ function HealthReportDialog({ reportData, open, onOpenChange }: { reportData: He
     if (printableContent) {
       const printWindow = window.open('', '_blank');
       printWindow?.document.write('<html><head><title>Formulaire de Santé</title>');
-      printWindow?.document.write('<style>@media print { body { margin: 20px; font-family: sans-serif; color: #000; } .no-print { display: none; } h1, h2, h3, h4, p, li, strong { color: #000 !important; } }</style>');
+      // Basic styling for print
+      printWindow?.document.write('<style>body{font-family:sans-serif;margin:20px;}h1,h2,h3,h4{color:#333;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ccc;padding:8px;text-align:left;}.no-print{display:none;}</style>');
       printWindow?.document.write('</head><body>');
       printWindow?.document.write(printableContent.innerHTML);
       printWindow?.document.write('</body></html>');
@@ -183,8 +191,8 @@ function AiAnalysisDialog({ analysis, error, open, onOpenChange, isLoading }: { 
             <div className="p-4 border rounded-lg bg-muted/50 text-sm">
               <p><strong>Priorité :</strong> <span className={
                 analysis.priority === "Élevée" ? "text-destructive font-bold" : 
-                analysis.priority === "Moyenne" ? "text-yellow-600 font-bold" : 
-                analysis.priority === "Faible" ? "text-green-600 font-bold" : ""
+                analysis.priority === "Moyenne" ? "text-yellow-600 font-bold" : // Consider theming this color
+                analysis.priority === "Faible" ? "text-green-600 font-bold" : "" // Consider theming this color
               }>{analysis.priority}</span></p>
               <p><strong>Justification :</strong> {analysis.reasoning}</p>
               <div>
@@ -209,9 +217,11 @@ function AiAnalysisDialog({ analysis, error, open, onOpenChange, isLoading }: { 
 
 
 export default function PatientDetailPage({ params: paramsProp }: { params: { id: string } }) {
-  const resolvedParams = use(paramsProp);
-  const patientId = resolvedParams.id;
-  console.log('[PatientDetailPage] Component rendered. Initial patientId from resolvedParams:', patientId);
+  console.log('[PatientDetailPage] Component rendering. Raw paramsProp:', paramsProp);
+  const resolvedParams = use(paramsProp); // Ensure this is how Next.js expects params to be used in Client Components
+  const patientId = resolvedParams?.id;
+  console.log('[PatientDetailPage] Resolved patientId:', patientId);
+
 
   const [patient, setPatient] = useState<PatientFirestoreData | null>(null);
   const [medicalHistory, setMedicalHistory] = useState<MedicalRecordFirestoreData[]>([]);
@@ -225,10 +235,10 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
   const [patientEmergencyError, setPatientEmergencyError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('[PatientDetailPage] useEffect triggered. patientId:', patientId);
+    console.log('[PatientDetailPage] useEffect triggered. patientId for fetching:', patientId);
     if (!patientId) {
-      console.warn('[PatientDetailPage] Patient ID is missing in useEffect.');
-      setError("ID du patient non fourni.");
+      console.warn('[PatientDetailPage] Patient ID is missing in useEffect. Cannot fetch data.');
+      setError("ID du patient non fourni pour la récupération des données.");
       setIsLoading(false);
       return;
     }
@@ -238,7 +248,7 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
       setError(null);
       console.log(`[PatientDetailPage] Starting data fetch for patient ID: ${patientId}`);
       try {
-        console.log(`[PatientDetailPage] Fetching patient data for ID: ${patientId}`);
+        // Fetch patient details
         const patientDocRef = doc(db, "patients", patientId);
         const patientDocSnap = await getDoc(patientDocRef);
 
@@ -249,26 +259,31 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
         } else {
           console.warn(`[PatientDetailPage] No patient found with ID: ${patientId}`);
           setError("Patient non trouvé.");
-          setPatient(null);
+          setPatient(null); // Explicitly set to null if not found
         }
 
-        console.log(`[PatientDetailPage] Fetching medical history for patient ID: ${patientId}`);
+        // Fetch medical history
+        // Assumes 'dossiersMedicaux' is the collection name for medical records
         const medicalHistoryQuery = query(
-          collection(db, "dossiersMedicaux"), // Make sure this collection name is correct
+          collection(db, "dossiersMedicaux"), 
           where("patientId", "==", patientId),
-          orderBy("consultationDate", "desc")
+          orderBy("consultationDate", "desc") // Show most recent first
         );
         const medicalHistorySnapshot = await getDocs(medicalHistoryQuery);
         const fetchedMedicalHistory: MedicalRecordFirestoreData[] = [];
-        medicalHistorySnapshot.forEach((doc) => {
-          fetchedMedicalHistory.push({ id: doc.id, ...doc.data() } as MedicalRecordFirestoreData);
+        medicalHistorySnapshot.forEach((docSnap) => { // Renamed doc to docSnap to avoid conflict
+          fetchedMedicalHistory.push({ id: docSnap.id, ...docSnap.data() } as MedicalRecordFirestoreData);
         });
         console.log("[PatientDetailPage] Medical history fetched:", fetchedMedicalHistory);
         setMedicalHistory(fetchedMedicalHistory);
 
       } catch (err: any) {
         console.error("[PatientDetailPage] Error fetching patient data or medical history:", err);
-        setError(`Erreur lors de la récupération des données du patient : ${err.message}. Assurez-vous que les règles de sécurité Firestore autorisent la lecture des collections 'patients' et 'dossiersMedicaux'.`);
+        let errorMessage = `Erreur lors de la récupération des données du patient : ${err.message}.`;
+        if (err.code === 'permission-denied' || (err.message && err.message.toLowerCase().includes("permission"))) {
+            errorMessage += " Veuillez vérifier vos règles de sécurité Firestore et vous assurer que l'utilisateur authentifié a les droits de lecture.";
+        }
+        setError(errorMessage);
       } finally {
         setIsLoading(false);
         console.log("[PatientDetailPage] Data fetching finished.");
@@ -276,27 +291,33 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
     };
 
     fetchPatientData();
-  }, [patientId]);
+  }, [patientId]); // Re-run effect if patientId changes
+  
+  const handleOpenReportDialog = () => {
+    console.log('[PatientDetailPage] "Formulaire de Santé" button clicked.');
+    if (!patient) {
+        toast.error("Informations du patient non chargées.", { description: "Impossible de générer le formulaire sans données patient."});
+        return;
+    }
+    // In a real scenario, you might select a specific consultation from medicalHistory
+    // to populate the report. For now, using the latest or general info.
+    setIsReportDialogOpen(true);
+  };
   
   useEffect(() => {
     console.log('[PatientDetailPage] isAnalyzingPatientEmergency state changed to:', isAnalyzingPatientEmergency);
   }, [isAnalyzingPatientEmergency]);
 
-  const handleOpenReportDialog = () => {
-    console.log('[PatientDetailPage] "Formulaire de Santé" button clicked.');
-    setIsReportDialogOpen(true);
-  };
-  
   const handleEmergencyAI = async () => {
-    // TODO: This needs a clear source for symptoms. 
-    // For now, it uses a placeholder. This should be linked to a specific medical record's symptoms or a dedicated input.
-    const symptomsDescription = medicalHistory.length > 0 && medicalHistory[0]?.symptomes ? medicalHistory[0].symptomes : "Symptômes généraux du patient (pas de dossier récent spécifié)."; 
+    // Use the most recent medical record's symptoms or a general placeholder
+    const symptomsDescription = medicalHistory[0]?.symptomes || patient?.symptomesGeneraux || "Symptômes non spécifiés dans le dossier le plus récent.";
     
-    if (!symptomsDescription || symptomsDescription.length < 10) {
+    if (!symptomsDescription || symptomsDescription.trim().length < 10) {
       toast.error("Description des symptômes insuffisante pour une analyse IA.", {
-        description: "Veuillez sélectionner un dossier médical avec des symptômes ou fournir une description plus détaillée."
+        description: "Veuillez vous assurer qu'il y a des symptômes enregistrés ou fournissez une description plus détaillée."
       });
       setPatientEmergencyError("Description des symptômes insuffisante (min. 10 caractères).");
+      setPatientEmergencyAnalysis(null);
       setIsAiAnalysisDialogOpen(true);
       return;
     }
@@ -316,14 +337,12 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
       console.error("[PatientDetailPage] Error analyzing patient emergency case:", error);
       let userFriendlyMessage = "Une erreur inconnue est survenue lors de l'analyse IA.";
       if (error instanceof Error || (error && typeof error.message === 'string')) {
-         if (error.message.toLowerCase().includes("not_found") && error.message.toLowerCase().includes("model")) {
-          userFriendlyMessage = "Le modèle d'IA spécifié n'a pas été trouvé ou n'est pas accessible.\nConseils :\n1. Vérifiez que votre GOOGLE_API_KEY dans le fichier .env est correcte, active et autorisée à utiliser les modèles Gemini.\n2. Assurez-vous que l'API \"Generative Language\" ou \"Vertex AI\" est activée dans votre projet Google Cloud.\n3. Le modèle demandé (ex: 'gemini-pro') doit être disponible pour votre compte et région.";
-        } else if (error.message.toLowerCase().includes("permission_denied")) {
-            userFriendlyMessage = "Permission refusée par le service IA. Vérifiez que votre GOOGLE_API_KEY a les droits nécessaires.";
-        } else if (error.message.toLowerCase().includes("invalid_argument") && error.message.toLowerCase().includes("api key not valid")) {
-          userFriendlyMessage = "Clé API invalide. Veuillez vérifier votre GOOGLE_API_KEY dans le fichier .env.";
-        } else if (error.message.toLowerCase().includes("invalid_argument") && error.message.toLowerCase().includes("must supply a `model`")) {
-           userFriendlyMessage = "Argument invalide : Le modèle d'IA doit être spécifié pour l'appel. Vérifiez la configuration du flux Genkit.";
+         if (error.message.includes("NOT_FOUND") && error.message.includes("Model")) {
+          userFriendlyMessage = `Le modèle d'IA spécifié (${(error.message.match(/Model '(.*)' not found/) || [])[1] || 'inconnu'}) n'a pas été trouvé ou n'est pas accessible.\nConseils :\n1. Vérifiez que votre GOOGLE_API_KEY dans le fichier .env est correcte, active et autorisée.\n2. Assurez-vous que l'API "Generative Language" ou "Vertex AI" est activée dans votre projet Google Cloud.`;
+        } else if (error.message.includes("PERMISSION_DENIED") || error.message.includes("API key not valid")) {
+            userFriendlyMessage = "Permission refusée par le service IA ou clé API invalide. Vérifiez votre GOOGLE_API_KEY.";
+        } else if (error.message.includes("INVALID_ARGUMENT") && error.message.includes("Must supply a `model`")) {
+           userFriendlyMessage = "Argument invalide : Le modèle d'IA doit être spécifié. Vérifiez la configuration Genkit.";
         } else {
           userFriendlyMessage = error.message;
         }
@@ -335,6 +354,7 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
     }
   };
   
+  // Mock data or data derived from 'patient' and 'medicalHistory'
   const mockHealthReportData: HealthReportData | null = patient ? {
     patientInfo: {
       id: patient.id,
@@ -345,15 +365,14 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
       email: patient.email || "Non renseigné",
     },
     doctorInfo: { 
-      nom: "Dr. Alpha", // Placeholder
-      specialite: "Médecine Générale", // Placeholder
+      nom: medicalHistory[0]?.doctorName || "Dr. Prénom Nom (Exemple)", // Placeholder, should come from staff or consultation data
+      specialite: medicalHistory[0]?.doctorSpecialty || "Médecine Générale (Exemple)", // Placeholder
     },
-    // These details should ideally come from a selected medical record
-    consultationDate: medicalHistory[0]?.consultationDate ? format(medicalHistory[0].consultationDate.toDate(), 'dd MMMM yyyy', { locale: fr }) : new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' }),
+    consultationDate: medicalHistory[0]?.consultationDate ? format(medicalHistory[0].consultationDate.toDate(), 'dd MMMM yyyy HH:mm', { locale: fr }) : "Date non spécifiée",
     symptomes: medicalHistory[0]?.symptomes || "Non spécifiés (données exemples)",
     diagnostic: medicalHistory[0]?.diagnostic || "Non spécifié (données exemples)",
     traitement: medicalHistory[0]?.traitementPrescrit ? [{ medicament: medicalHistory[0].traitementPrescrit, posologie: "Selon prescription" }] : [{ medicament: "Paracétamol", posologie: "1g 3x/jour (données exemples)" }],
-    conseils: "Reposez-vous bien, hydratez-vous (données exemples).", 
+    conseils: medicalHistory[0]?.notesMedecin || "Reposez-vous bien, hydratez-vous (données exemples).", 
     prochainRendezVous: "Dans 7 jours si pas d'amélioration (données exemples).", 
   } : null;
 
@@ -373,42 +392,37 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
         <AlertTriangle className="h-4 w-4" />
         <AlertTitle>Erreur de chargement</AlertTitle>
         <UiAlertDescription>{error}</UiAlertDescription>
+         <Button variant="outline" asChild className="mt-4">
+          <Link href="/dashboard?tab=patients"><ArrowLeft className="mr-2 h-4 w-4" /> Retour à la liste des patients</Link>
+        </Button>
       </Alert>
     );
   }
   
-  if (!patient) {
+  if (!patient) { // This case should ideally be covered by the error state if fetching fails
      return (
       <Alert variant="destructive" className="m-4">
         <AlertTriangle className="h-4 w-4" />
         <AlertTitle>Patient Introuvable</AlertTitle>
         <UiAlertDescription>Aucun patient trouvé avec l'ID {patientId}. Veuillez vérifier l'ID ou retourner à la liste des patients.</UiAlertDescription>
+        <Button variant="outline" asChild className="mt-4">
+          <Link href="/dashboard?tab=patients"><ArrowLeft className="mr-2 h-4 w-4" /> Retour à la liste des patients</Link>
+        </Button>
       </Alert>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-semibold">Fiche Patient : {patient.firstName} {patient.lastName}</h1>
-        <div className="flex space-x-2">
-          <Button onClick={handleOpenReportDialog} variant="outline">
-            <FileText className="mr-2 h-5 w-5" />
-            Formulaire de Santé
-          </Button>
-          <Button 
-            onClick={handleEmergencyAI} 
-            variant="outline" 
-            disabled={isAnalyzingPatientEmergency}
-          >
-            <BrainCircuit className="mr-2 h-5 w-5" />
-            {isAnalyzingPatientEmergency ? "Analyse IA en cours..." : "Évaluer Urgence (IA)"}
-          </Button>
-        </div>
+        <Button variant="outline" asChild>
+          <Link href="/dashboard?tab=patients"><ArrowLeft className="mr-2 h-4 w-4" /> Retour à la liste</Link>
+        </Button>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        <Card>
+      <div className="grid md:grid-cols-3 gap-6">
+        <Card className="md:col-span-1">
           <CardHeader>
             <CardTitle>Informations Personnelles</CardTitle>
           </CardHeader>
@@ -422,12 +436,33 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
             <p><strong>Email :</strong> {patient.email || "Non renseigné"}</p>
           </CardContent>
         </Card>
+        
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle>Actions Rapides</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+            <Button onClick={handleOpenReportDialog} variant="outline" className="w-full sm:w-auto">
+              <FileText className="mr-2 h-5 w-5" />
+              Formulaire de Santé
+            </Button>
+            <Button 
+              onClick={handleEmergencyAI} 
+              variant="default" // Changed variant for emphasis
+              disabled={isAnalyzingPatientEmergency}
+              className="w-full sm:w-auto"
+            >
+              <BrainCircuit className="mr-2 h-5 w-5" />
+              {isAnalyzingPatientEmergency ? "Analyse IA en cours..." : "Évaluer Urgence (IA)"}
+            </Button>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Historique Médical</CardTitle>
-          <CardDescription>Liste des consultations et dossiers médicaux.</CardDescription>
+          <CardDescription>Liste des consultations et dossiers médicaux du patient.</CardDescription>
         </CardHeader>
         <CardContent>
           {medicalHistory.length > 0 ? (
@@ -435,9 +470,13 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
               {medicalHistory.map((entry) => (
                 <li key={entry.id} className="p-3 border rounded-md bg-muted/30 hover:bg-muted/50 transition-colors">
                   <div className="flex justify-between items-center">
-                    <h4 className="font-semibold">
-                      Consultation du {format(entry.consultationDate.toDate(), 'dd MMMM yyyy à HH:mm', { locale: fr })}
-                    </h4>
+                    <div>
+                        <h4 className="font-semibold">
+                        Consultation du {format(entry.consultationDate.toDate(), 'dd MMMM yyyy à HH:mm', { locale: fr })}
+                        </h4>
+                        {entry.motifConsultation && <p className="text-sm"><strong>Motif :</strong> {entry.motifConsultation}</p>}
+                        {entry.diagnostic && <p className="text-sm"><strong>Diagnostic :</strong> {entry.diagnostic}</p>}
+                    </div>
                     <Button variant="outline" size="sm" asChild>
                        <Link href={`/medical-records/${entry.id}`}>
                          <Eye className="mr-2 h-4 w-4" />
@@ -445,8 +484,6 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
                        </Link>
                     </Button>
                   </div>
-                  {entry.motifConsultation && <p className="text-sm"><strong>Motif :</strong> {entry.motifConsultation}</p>}
-                  {entry.diagnostic && <p className="text-sm"><strong>Diagnostic :</strong> {entry.diagnostic}</p>}
                 </li>
               ))}
             </ul>
@@ -472,3 +509,4 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
     </div>
   );
 }
+
