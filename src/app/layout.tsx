@@ -31,9 +31,9 @@ export default function RootLayout({
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="light" // Changé de forcedTheme à defaultTheme
-          enableSystem={false} // Gardé à false pour l'instant
-          disableTransitionOnChange // Gardé pour éviter les transitions pendant le débogage
+          defaultTheme="light"
+          enableSystem={true} // Changé de false à true
+          disableTransitionOnChange
         >
           <AppProvider>
             {children}
