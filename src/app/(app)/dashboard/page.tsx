@@ -8,17 +8,26 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Added Select
+import { Calendar } from "@/components/ui/calendar"; // Added Calendar
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"; // Added Popover
 import { ResponsiveContainer, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Bar } from 'recharts';
 import { useState, useEffect, Suspense, useMemo } from "react";
 import type { EmergencyCaseAnalysis } from "@/ai/flows/emergency-flow";
 import { analyzeEmergencyCase } from "@/ai/flows/emergency-flow";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, BrainCircuit, Users, CalendarDays, LineChartIcon, ShieldCheck, PlusCircle, Eye, Search, FileText } from "lucide-react";
+import { Terminal, BrainCircuit, Users, CalendarDays, LineChartIcon, ShieldCheck, PlusCircle, Eye, Search, FileText, CalendarIcon as LucideCalendarIcon, Loader2, AlertTriangle } from "lucide-react"; // Added Select, CalendarIcon, Loader2, AlertTriangle
 import Link from 'next/link';
 import { db } from "@/lib/firebase";
-import { collection, getDocs, query, orderBy, Timestamp, doc, getDoc } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, Timestamp, doc, getDoc, addDoc, serverTimestamp } from "firebase/firestore";
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { zodResolver } from "@hookform/resolvers/zod"; // For new medical record form
+import { useForm } from "react-hook-form"; // For new medical record form
+import { z } from "zod"; // For new medical record form
+import { cn } from "@/lib/utils"; // For new medical record form
+import { toast } from "sonner"; // For new medical record form
+import { useRouter } from 'next/navigation'; // For new medical record form
 
 
 // Placeholder data for appointments chart
@@ -73,7 +82,7 @@ function DashboardTabContent() {
       let userFriendlyMessage = "Une erreur inconnue est survenue lors de l'analyse.";
        if (error instanceof Error || (error && typeof error.message === 'string')) {
         if (error.message.includes("NOT_FOUND") && error.message.includes("Model")) {
-          userFriendlyMessage = `Le modèle d'IA spécifié (${(error.message.match(/Model '(.*)' not found/) || [])[1] || 'inconnu'}) n'a pas été trouvé ou n'est pas accessible.\nConseils :\n1. Vérifiez que votre GOOGLE_API_KEY dans le fichier .env est correcte, active et autorisée à utiliser les modèles Gemini.\n2. Assurez-vous que l'API "Generative Language" ou "Vertex AI" est activée dans votre projet Google Cloud.\n3. Le modèle demandé doit être disponible pour votre compte et région.`;
+          userFriendlyMessage = `Le modèle d'IA spécifié (${(error.message.match(/Model '(.*)' not found/) || [])[1] || 'gemini-pro'}) n'a pas été trouvé ou n'est pas accessible.\nConseils :\n1. Vérifiez que votre GOOGLE_API_KEY dans le fichier .env est correcte, active et autorisée à utiliser les modèles Gemini.\n2. Assurez-vous que l'API "Generative Language" ou "Vertex AI" est activée dans votre projet Google Cloud.\n3. Le modèle demandé doit être disponible pour votre compte et région.`;
         } else if (error.message.includes("PERMISSION_DENIED") || error.message.includes("API key not valid")) {
           userFriendlyMessage = "Permission refusée par le service IA ou clé API invalide. Vérifiez votre GOOGLE_API_KEY et ses droits.";
         } else if (error.message.includes("INVALID_ARGUMENT") && error.message.includes("Must supply a `model`")) {
@@ -116,7 +125,8 @@ function DashboardTabContent() {
           </CardHeader>
           <CardContent className="flex flex-col space-y-2">
             <Button asChild><Link href="/patients/new"><PlusCircle className="mr-2 h-4 w-4" />Nouveau Patient</Link></Button>
-            <Button variant="outline" asChild><Link href="/appointments/new"><PlusCircle className="mr-2 h-4 w-4" />Nouveau Rendez-vous</Link></Button>
+            {/* Link to new tab for new appointment/medical record */}
+            <Button variant="outline" asChild><Link href="/dashboard?tab=new-medical-record"><PlusCircle className="mr-2 h-4 w-4" />Nouv. Dossier Médical</Link></Button>
           </CardContent>
         </Card>
       </div>
@@ -326,8 +336,7 @@ function PatientsTabContent() {
             <ul className="space-y-3">
               {filteredPatients.map((patient) => {
                 const patientDetailUrl = `/patients/${patient.id}`;
-                const newConsultationUrl = `/medical-records/new/${patient.id}`;
-                console.log(`[PatientsTabContent] Rendering patient: ${patient.firstName} ${patient.lastName}, Link Href: ${patientDetailUrl}, New Consultation Href: ${newConsultationUrl}`);
+                console.log(`[PatientsTabContent] Rendering patient: ${patient.firstName} ${patient.lastName}, Link Href: ${patientDetailUrl}`);
                 return (
                   <li key={patient.id} className="p-4 border rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center hover:bg-muted/50">
                     <div className="mb-2 sm:mb-0">
@@ -340,9 +349,7 @@ function PatientsTabContent() {
                       <Button variant="outline" size="sm" asChild>
                         <Link href={patientDetailUrl}><Eye className="mr-2 h-4 w-4" />Voir Fiche</Link>
                       </Button>
-                      <Button variant="default" size="sm" asChild>
-                        <Link href={newConsultationUrl}><PlusCircle className="mr-2 h-4 w-4" />Nouv. Consultation</Link>
-                      </Button>
+                       {/* "Nouv. Consultation" button removed from here, moved to its own tab */}
                     </div>
                   </li>
                 );
@@ -414,9 +421,10 @@ function AppointmentsTabContent() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-semibold">Gestion des Rendez-vous</h1>
+        {/* Button to navigate to new medical record tab */}
         <Button asChild>
-          <Link href="/appointments/new">
-            <PlusCircle className="mr-2 h-4 w-4" />Nouveau Rendez-vous
+          <Link href="/dashboard?tab=new-medical-record">
+            <PlusCircle className="mr-2 h-4 w-4" />Nouv. Dossier Médical
           </Link>
         </Button>
       </div>
@@ -438,7 +446,7 @@ function AppointmentsTabContent() {
 
           {!isLoading && !fetchError && appointmentsList.length === 0 && (
             <p className="text-muted-foreground text-center py-8">
-              Aucun rendez-vous planifié pour le moment. Cliquez sur "Nouveau Rendez-vous" pour en ajouter un.
+              Aucun rendez-vous planifié pour le moment. Cliquez sur "Nouv. Dossier Médical" pour en ajouter un (lié à une consultation).
             </p>
           )}
 
@@ -488,6 +496,291 @@ function AppointmentsTabContent() {
     </div>
   );
 }
+
+// --- New Tab for Creating Medical Record ---
+const medicalRecordFormSchema = z.object({
+  consultationDate: z.date({
+    required_error: "La date de consultation est requise.",
+  }),
+  motifConsultation: z.string().min(5, { message: "Le motif doit contenir au moins 5 caractères." }).optional().or(z.literal('')),
+  symptomes: z.string().min(5, { message: "Les symptômes doivent contenir au moins 5 caractères." }).optional().or(z.literal('')),
+  diagnostic: z.string().min(3, { message: "Le diagnostic doit contenir au moins 3 caractères." }).optional().or(z.literal('')),
+  traitementPrescrit: z.string().optional(),
+  notesMedecin: z.string().optional(),
+});
+
+type MedicalRecordFormValues = z.infer<typeof medicalRecordFormSchema>;
+
+function NewMedicalRecordTabContent() {
+  const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [patientsForSelect, setPatientsForSelect] = useState<PatientData[]>([]);
+  const [isLoadingPatients, setIsLoadingPatients] = useState(true);
+  const [selectedPatientId, setSelectedPatientId] = useState<string | undefined>(undefined);
+  const [formKey, setFormKey] = useState(Date.now()); // To reset form on patient change
+
+  useEffect(() => {
+    const fetchPatientsForSelect = async () => {
+      setIsLoadingPatients(true);
+      try {
+        const patientsCollectionRef = collection(db, "patients");
+        const q = query(patientsCollectionRef, orderBy("lastName", "asc"), orderBy("firstName", "asc"));
+        const querySnapshot = await getDocs(q);
+        const fetchedPatients: PatientData[] = [];
+        querySnapshot.forEach((doc) => {
+          fetchedPatients.push({ id: doc.id, ...doc.data() } as PatientData);
+        });
+        setPatientsForSelect(fetchedPatients);
+      } catch (error) {
+        console.error("Error fetching patients for select:", error);
+        toast.error("Erreur lors du chargement des patients.");
+      } finally {
+        setIsLoadingPatients(false);
+      }
+    };
+    fetchPatientsForSelect();
+  }, []);
+
+  const form = useForm<MedicalRecordFormValues>({
+    resolver: zodResolver(medicalRecordFormSchema),
+    defaultValues: {
+      consultationDate: new Date(),
+      motifConsultation: "",
+      symptomes: "",
+      diagnostic: "",
+      traitementPrescrit: "",
+      notesMedecin: "",
+    },
+  });
+
+  useEffect(() => {
+    // Reset form when selected patient changes
+    form.reset({
+        consultationDate: new Date(),
+        motifConsultation: "",
+        symptomes: "",
+        diagnostic: "",
+        traitementPrescrit: "",
+        notesMedecin: "",
+    });
+    setFormKey(Date.now()); // Force re-render of Form by changing key
+  }, [selectedPatientId, form]);
+
+
+  async function onSubmit(data: MedicalRecordFormValues) {
+    if (!selectedPatientId) {
+      toast.error("Veuillez sélectionner un patient.");
+      return;
+    }
+    const selectedPatient = patientsForSelect.find(p => p.id === selectedPatientId);
+    if (!selectedPatient) {
+        toast.error("Patient sélectionné introuvable.");
+        return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const medicalRecordData = {
+        ...data,
+        patientId: selectedPatientId,
+        patientName: `${selectedPatient.firstName} ${selectedPatient.lastName}`, // Store patient name for easy display
+        consultationDate: Timestamp.fromDate(data.consultationDate),
+        createdAt: serverTimestamp(),
+      };
+
+      console.log('[NewMedicalRecordTabContent] Submitting medical record data:', medicalRecordData);
+      const docRef = await addDoc(collection(db, "dossiersMedicaux"), medicalRecordData);
+      toast.success("Dossier médical enregistré avec succès!", {
+        description: `Nouveau dossier créé pour ${selectedPatient.firstName} ${selectedPatient.lastName} (ID: ${docRef.id})`,
+      });
+      form.reset();
+      setSelectedPatientId(undefined); // Reset patient selection
+      // Optionally navigate or update UI
+      router.push(`/patients/${selectedPatientId}`); // Navigate to patient details page
+    } catch (error: any) {
+      console.error("[NewMedicalRecordTabContent] Erreur lors de l'enregistrement du dossier médical :", error);
+      toast.error("Erreur lors de l'enregistrement du dossier.", {
+        description: error instanceof Error ? error.message : "Une erreur inconnue est survenue.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+  
+  const patientName = patientsForSelect.find(p => p.id === selectedPatientId);
+  const pageTitle = selectedPatientId && patientName ? 
+    `Nouvelle Consultation pour : ${patientName.firstName} ${patientName.lastName}` : 
+    "Nouvelle Consultation / Entrée au Dossier Médical";
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-3xl font-semibold">{pageTitle}</h1>
+      <Card className="max-w-3xl mx-auto">
+        <CardHeader>
+          <CardTitle>Saisir les informations de la consultation</CardTitle>
+          {!selectedPatientId && (
+            <CardDescription>
+              Veuillez d'abord sélectionner un patient.
+            </CardDescription>
+          )}
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="patient-select">Sélectionner un Patient</Label>
+            <Select
+              value={selectedPatientId}
+              onValueChange={setSelectedPatientId}
+              disabled={isLoadingPatients}
+            >
+              <SelectTrigger id="patient-select" className="w-full md:w-[300px]">
+                <SelectValue placeholder={isLoadingPatients ? "Chargement des patients..." : "Choisir un patient"} />
+              </SelectTrigger>
+              <SelectContent>
+                {isLoadingPatients ? (
+                  <SelectItem value="loading" disabled>Chargement...</SelectItem>
+                ) : patientsForSelect.length === 0 ? (
+                  <SelectItem value="no-patients" disabled>Aucun patient trouvé</SelectItem>
+                ) : (
+                  patientsForSelect.map(patient => (
+                    <SelectItem key={patient.id} value={patient.id}>
+                      {patient.lastName}, {patient.firstName} (Né le: {patient.dob ? format(new Date(patient.dob), 'dd/MM/yyyy', { locale: fr }) : 'N/A'})
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {selectedPatientId && (
+            <Form {...form} key={formKey}> {/* Add key here */}
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                <FormField
+                  control={form.control}
+                  name="consultationDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Date de la Consultation</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                              disabled={isSubmitting}
+                            >
+                              {field.value ? (
+                                format(field.value, "PPP", { locale: fr })
+                              ) : (
+                                <span>Choisir une date</span>
+                              )}
+                              <LucideCalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) => date > new Date()}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="motifConsultation"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Motif de la Consultation</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Ex: Suivi annuel, Douleurs abdominales..." {...field} disabled={isSubmitting} rows={3} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="symptomes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Symptômes Rapportés</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Ex: Fièvre, Toux persistante, Fatigue..." {...field} disabled={isSubmitting} rows={4}/>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="diagnostic"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Diagnostic</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: Grippe saisonnière, Gastrite..." {...field} disabled={isSubmitting} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="traitementPrescrit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Traitement Prescrit</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Ex: Paracétamol 1g 3x/jour pendant 5 jours, Repos..." {...field} disabled={isSubmitting} rows={4}/>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="notesMedecin"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Notes du Médecin</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Notes additionnelles, observations..." {...field} disabled={isSubmitting} rows={3}/>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || !selectedPatientId}>
+                  {isSubmitting ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enregistrement...</>
+                  ) : (
+                    "Enregistrer la Consultation"
+                  )}
+                </Button>
+              </form>
+            </Form>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 
 function StatisticsTabContent() {
   const diseaseData = [
@@ -550,6 +843,7 @@ function MainAppPage() {
     dashboard: <DashboardTabContent />,
     patients: <PatientsTabContent />,
     appointments: <AppointmentsTabContent />,
+    'new-medical-record': <NewMedicalRecordTabContent />, // New tab content
     statistics: <StatisticsTabContent />,
     admin: <AdminTabContent />,
   };
@@ -572,6 +866,11 @@ function MainAppPage() {
             <TabsTrigger value="appointments" asChild>
               <Link href="/dashboard?tab=appointments" className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm gap-2">
                 <CalendarDays className="h-4 w-4" />Rendez-vous
+              </Link>
+            </TabsTrigger>
+            <TabsTrigger value="new-medical-record" asChild> {/* New tab trigger */}
+              <Link href="/dashboard?tab=new-medical-record" className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm gap-2">
+                <FileText className="h-4 w-4" />Nouv. Dossier
               </Link>
             </TabsTrigger>
             <TabsTrigger value="statistics" asChild>
