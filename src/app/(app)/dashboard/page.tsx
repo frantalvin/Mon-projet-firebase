@@ -337,8 +337,6 @@ function PatientsTabContent() {
               {filteredPatients.map((patient) => {
                 const patientDetailUrl = `/patients/${patient.id}`;
                 console.log(`[PatientsTabContent] Rendering patient: ${patient.firstName} ${patient.lastName}, Link Href: ${patientDetailUrl}`);
-                const newConsultationUrl = `/medical-records/new/${patient.id}`;
-                console.log(`[PatientsTabContent] New Consultation Href: ${newConsultationUrl}`);
                 return (
                   <li key={patient.id} className="p-4 border rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center hover:bg-muted/50">
                     <div className="mb-2 sm:mb-0">
@@ -351,9 +349,7 @@ function PatientsTabContent() {
                       <Button variant="outline" size="sm" asChild>
                         <Link href={patientDetailUrl}><Eye className="mr-2 h-4 w-4" />Voir Fiche</Link>
                       </Button>
-                       <Button size="sm" asChild>
-                        <Link href={newConsultationUrl}><PlusCircle className="mr-2 h-4 w-4" />Nouv. Consultation</Link>
-                      </Button>
+                       {/* Bouton "Nouv. Consultation" supprimé d'ici */}
                     </div>
                   </li>
                 );
@@ -409,7 +405,7 @@ function AppointmentsTabContent() {
         console.error("[AppointmentsTabContent] Erreur lors de la récupération des rendez-vous :", error);
         let errorMessage = `Impossible de charger la liste des rendez-vous. ${error.message || "Erreur inconnue."}`;
         if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes("permission"))) {
-            errorMessage += " Veuillez vérifier vos règles de sécurité Firestore pour la collection 'appointments' et vous assurer que l'utilisateur authentifié a les droits de lecture.";
+            errorMessage += " Veuillez vérifier vos règles de sécurité Firestore pour la collection 'appointments'.";
         }
         setFetchError(errorMessage);
       } finally {
@@ -425,6 +421,7 @@ function AppointmentsTabContent() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-semibold">Gestion des Rendez-vous</h1>
+        {/* Le bouton "Nouveau Rendez-vous" peut être ajouté ici et lié à /dashboard?tab=new-appointment ou une page dédiée */}
         <Button asChild>
           <Link href="/dashboard?tab=new-medical-record"> 
             <PlusCircle className="mr-2 h-4 w-4" />Nouv. Dossier Médical
@@ -449,7 +446,7 @@ function AppointmentsTabContent() {
 
           {!isLoading && !fetchError && appointmentsList.length === 0 && (
             <p className="text-muted-foreground text-center py-8">
-              Aucun rendez-vous planifié pour le moment. Cliquez sur "Nouv. Dossier Médical" pour en ajouter un (lié à une consultation).
+              Aucun rendez-vous planifié pour le moment.
             </p>
           )}
 
@@ -526,7 +523,6 @@ function NewMedicalRecordTabContent() {
       setIsLoadingPatients(true);
       try {
         const patientsCollectionRef = collection(db, "patients");
-        // SIMPLIFIED QUERY: Order only by lastName to potentially avoid needing a composite index immediately
         const q = query(patientsCollectionRef, orderBy("lastName", "asc"));
         const querySnapshot = await getDocs(q);
         const fetchedPatients: PatientData[] = [];
@@ -538,7 +534,7 @@ function NewMedicalRecordTabContent() {
         console.error("Error fetching patients for select:", error);
         if (error.message && error.message.includes("requires an index")) {
             toast.error("Erreur de chargement des patients : Index Firestore manquant.", {
-                description: "Un index est requis pour trier les patients. Veuillez créer l'index composite suggéré dans la console Firebase pour 'patients' (tri par lastName, puis firstName).",
+                description: "Un index est requis pour trier les patients. Veuillez créer l'index composite suggéré dans la console Firebase pour 'patients' (tri par lastName).",
                 duration: 10000,
             });
         } else {
@@ -564,7 +560,6 @@ function NewMedicalRecordTabContent() {
   });
 
   useEffect(() => {
-    // Reset form when selectedPatientId changes or when the form is re-keyed
     form.reset({
         consultationDate: new Date(),
         motifConsultation: "",
@@ -604,7 +599,7 @@ function NewMedicalRecordTabContent() {
       });
       form.reset();
       setSelectedPatientId(undefined); 
-      setFormKey(Date.now()); // Re-key to force re-render of form with default values
+      setFormKey(Date.now()); 
       router.push(`/patients/${selectedPatientId}`); 
     } catch (error: any) {
       console.error("[NewMedicalRecordTabContent] Erreur lors de l'enregistrement du dossier médical :", error);
@@ -640,7 +635,7 @@ function NewMedicalRecordTabContent() {
               value={selectedPatientId}
               onValueChange={(value) => {
                 setSelectedPatientId(value);
-                setFormKey(Date.now()); // Re-key form on patient selection
+                setFormKey(Date.now()); 
               }}
               disabled={isLoadingPatients}
             >
@@ -669,11 +664,12 @@ function NewMedicalRecordTabContent() {
           </div>
 
           {selectedPatientId && (
-            <Form {...form} key={formKey}> {/* Ensure form re-renders with new key */}
+            <Form {...form} key={formKey}> 
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                 <FormField
                   control={form.control}
                   name="consultationDate"
+                  key="consultationDate"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
                       <FormLabel>Date de la Consultation</FormLabel>
@@ -715,6 +711,7 @@ function NewMedicalRecordTabContent() {
                 <FormField
                   control={form.control}
                   name="motifConsultation"
+                  key="motifConsultation"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Motif de la Consultation</FormLabel>
@@ -729,6 +726,7 @@ function NewMedicalRecordTabContent() {
                 <FormField
                   control={form.control}
                   name="symptomes"
+                  key="symptomes"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Symptômes Rapportés</FormLabel>
@@ -743,6 +741,7 @@ function NewMedicalRecordTabContent() {
                 <FormField
                   control={form.control}
                   name="diagnostic"
+                  key="diagnostic"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Diagnostic</FormLabel>
@@ -757,6 +756,7 @@ function NewMedicalRecordTabContent() {
                 <FormField
                   control={form.control}
                   name="traitementPrescrit"
+                  key="traitementPrescrit"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Traitement Prescrit</FormLabel>
@@ -771,6 +771,7 @@ function NewMedicalRecordTabContent() {
                 <FormField
                   control={form.control}
                   name="notesMedecin"
+                  key="notesMedecin"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Notes du Médecin</FormLabel>
@@ -852,79 +853,43 @@ function AdminTabContent() {
   );
 }
 
+// Wrapper component for tabs to ensure Suspense is used correctly
 function MainAppPage() {
   const searchParams = useSearchParams();
   const currentTab = searchParams.get('tab') || 'dashboard';
 
-  const tabContents: { [key: string]: React.ReactNode } = {
-    dashboard: <DashboardTabContent />,
-    patients: <PatientsTabContent />,
-    appointments: <AppointmentsTabContent />,
-    'new-medical-record': <NewMedicalRecordTabContent />,
-    statistics: <StatisticsTabContent />,
-    admin: <AdminTabContent />,
-  };
+  // Define tabs configuration
+  const tabsConfig = [
+    { value: 'dashboard', label: 'Tableau de Bord', icon: BrainCircuit, content: <DashboardTabContent /> },
+    { value: 'patients', label: 'Patients', icon: Users, content: <PatientsTabContent /> },
+    { value: 'appointments', label: 'Rendez-vous', icon: CalendarDays, content: <AppointmentsTabContent /> },
+    { value: 'new-medical-record', label: 'Nouv. Dossier', icon: FileText, content: <NewMedicalRecordTabContent /> },
+    { value: 'statistics', label: 'Statistiques', icon: LineChartIcon, content: <StatisticsTabContent /> },
+    { value: 'admin', label: 'Admin', icon: ShieldCheck, content: <AdminTabContent /> },
+  ];
 
   return (
     <div className="flex flex-col h-full">
       <Tabs defaultValue={currentTab} value={currentTab} className="flex-grow flex flex-col">
         <div className="overflow-x-auto sticky top-0 bg-background z-10 shadow-sm border-b mb-4">
           <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-max">
-             <TabsTrigger value="dashboard" asChild>
-              <Link href="/dashboard?tab=dashboard">
-                <span className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium">
-                  <BrainCircuit className="h-4 w-4" />
-                  Tableau de Bord
-                </span>
-              </Link>
-            </TabsTrigger>
-            <TabsTrigger value="patients" asChild>
-              <Link href="/dashboard?tab=patients">
-                <span className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium">
-                  <Users className="h-4 w-4" />
-                  Patients
-                </span>
-              </Link>
-            </TabsTrigger>
-            <TabsTrigger value="appointments" asChild>
-              <Link href="/dashboard?tab=appointments">
-                 <span className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium">
-                  <CalendarDays className="h-4 w-4" />
-                  Rendez-vous
-                </span>
-              </Link>
-            </TabsTrigger>
-            <TabsTrigger value="new-medical-record" asChild>
-              <Link href="/dashboard?tab=new-medical-record">
-                 <span className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium">
-                  <FileText className="h-4 w-4" />
-                  Nouv. Dossier
-                </span>
-              </Link>
-            </TabsTrigger>
-            <TabsTrigger value="statistics" asChild>
-              <Link href="/dashboard?tab=statistics">
-                <span className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium">
-                  <LineChartIcon className="h-4 w-4" />
-                  Statistiques
-                </span>
-              </Link>
-            </TabsTrigger>
-            <TabsTrigger value="admin" asChild>
-              <Link href="/dashboard?tab=admin">
-                <span className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium">
-                  <ShieldCheck className="h-4 w-4" />
-                  Admin
-                </span>
-              </Link>
-            </TabsTrigger>
+            {tabsConfig.map((tab) => (
+              <TabsTrigger value={tab.value} asChild key={tab.value}>
+                <Link href={`/dashboard?tab=${tab.value}`}>
+                  <span className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium">
+                    <tab.icon className="h-4 w-4" />
+                    {tab.label}
+                  </span>
+                </Link>
+              </TabsTrigger>
+            ))}
           </TabsList>
         </div>
 
         <div className="flex-grow overflow-y-auto p-1">
-          {Object.keys(tabContents).map(tabKey => (
-            <TabsContent key={tabKey} value={tabKey} className="mt-0" style={{ display: currentTab === tabKey ? 'block' : 'none' }}>
-              {tabContents[tabKey as keyof typeof tabContents]}
+          {tabsConfig.map((tab) => (
+            <TabsContent key={tab.value} value={tab.value} className="mt-0" style={{ display: currentTab === tab.value ? 'block' : 'none' }}>
+              {tab.content}
             </TabsContent>
           ))}
         </div>
@@ -940,8 +905,4 @@ export default function DashboardPage() {
     </Suspense>
   );
 }
-    
-
-    
-
     
