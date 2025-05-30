@@ -4,17 +4,18 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BrainCircuit, FileText, Printer, Terminal, AlertTriangle, Loader2 } from "lucide-react";
+import { BrainCircuit, FileText, Printer, Terminal, AlertTriangle, Loader2, Eye } from "lucide-react"; // Added Eye
 import { use, useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { analyzeEmergencyCase, type EmergencyCaseAnalysis, type EmergencyCaseInput } from "@/ai/flows/emergency-flow";
+import { analyzeEmergencyCase, type EmergencyCaseAnalysis } from "@/ai/flows/emergency-flow";
 import { toast } from "sonner";
 import { Alert, AlertTitle, AlertDescription as UiAlertDescription } from "@/components/ui/alert";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, orderBy, getDocs, Timestamp } from "firebase/firestore";
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import Link from "next/link"; // Added Link
 
 interface PatientFirestoreData {
   id: string;
@@ -25,8 +26,6 @@ interface PatientFirestoreData {
   adresse?: string;
   phone?: string;
   email?: string;
-  // personneContactUrgence, groupeSanguin, allergies, antecedentsMedicauxImportants
-  // can be added later as needed
   createdAt?: Timestamp;
 }
 
@@ -37,7 +36,7 @@ interface MedicalRecordFirestoreData {
   motifConsultation?: string;
   diagnostic?: string;
   symptomes?: string;
-  traitementPrescrit?: string; // Could be an array or object
+  traitementPrescrit?: string;
   notesMedecin?: string;
   createdAt?: Timestamp;
 }
@@ -212,6 +211,7 @@ function AiAnalysisDialog({ analysis, error, open, onOpenChange, isLoading }: { 
 export default function PatientDetailPage({ params: paramsProp }: { params: { id: string } }) {
   const resolvedParams = use(paramsProp);
   const patientId = resolvedParams.id;
+  console.log('[PatientDetailPage] Component rendered. Initial patientId from resolvedParams:', patientId);
 
   const [patient, setPatient] = useState<PatientFirestoreData | null>(null);
   const [medicalHistory, setMedicalHistory] = useState<MedicalRecordFirestoreData[]>([]);
@@ -225,8 +225,9 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
   const [patientEmergencyError, setPatientEmergencyError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('[PatientDetailPage] Resolved patientId:', patientId);
+    console.log('[PatientDetailPage] useEffect triggered. patientId:', patientId);
     if (!patientId) {
+      console.warn('[PatientDetailPage] Patient ID is missing in useEffect.');
       setError("ID du patient non fourni.");
       setIsLoading(false);
       return;
@@ -235,8 +236,8 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
     const fetchPatientData = async () => {
       setIsLoading(true);
       setError(null);
+      console.log(`[PatientDetailPage] Starting data fetch for patient ID: ${patientId}`);
       try {
-        // Fetch patient details
         console.log(`[PatientDetailPage] Fetching patient data for ID: ${patientId}`);
         const patientDocRef = doc(db, "patients", patientId);
         const patientDocSnap = await getDoc(patientDocRef);
@@ -248,13 +249,12 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
         } else {
           console.warn(`[PatientDetailPage] No patient found with ID: ${patientId}`);
           setError("Patient non trouvé.");
-          setPatient(null); // Explicitly set to null if not found
+          setPatient(null);
         }
 
-        // Fetch medical history
         console.log(`[PatientDetailPage] Fetching medical history for patient ID: ${patientId}`);
         const medicalHistoryQuery = query(
-          collection(db, "dossiersMedicaux"),
+          collection(db, "dossiersMedicaux"), // Make sure this collection name is correct
           where("patientId", "==", patientId),
           orderBy("consultationDate", "desc")
         );
@@ -268,7 +268,7 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
 
       } catch (err: any) {
         console.error("[PatientDetailPage] Error fetching patient data or medical history:", err);
-        setError(`Erreur lors de la récupération des données du patient : ${err.message}`);
+        setError(`Erreur lors de la récupération des données du patient : ${err.message}. Assurez-vous que les règles de sécurité Firestore autorisent la lecture des collections 'patients' et 'dossiersMedicaux'.`);
       } finally {
         setIsLoading(false);
         console.log("[PatientDetailPage] Data fetching finished.");
@@ -277,24 +277,31 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
 
     fetchPatientData();
   }, [patientId]);
+  
+  useEffect(() => {
+    console.log('[PatientDetailPage] isAnalyzingPatientEmergency state changed to:', isAnalyzingPatientEmergency);
+  }, [isAnalyzingPatientEmergency]);
 
   const handleOpenReportDialog = () => {
     console.log('[PatientDetailPage] "Formulaire de Santé" button clicked.');
     setIsReportDialogOpen(true);
   };
   
-  // TODO: The "Evaluate Emergency (IA)" button on this page needs a clear source for symptoms.
-  // For now, it's disabled. It could be enabled if we select a specific medical record,
-  // or if there was a general "current reported symptoms" field to pull from.
   const handleEmergencyAI = async () => {
-    // This function is currently not easily callable as the button is disabled.
-    // If re-enabled, ensure a valid description is provided.
-    const symptomsDescription = "Symptômes non spécifiés pour cette vue d'ensemble."; // Placeholder
-    if (symptomsDescription.length < 10) {
-      toast.error("Description des symptômes insuffisante pour une analyse IA.");
+    // TODO: This needs a clear source for symptoms. 
+    // For now, it uses a placeholder. This should be linked to a specific medical record's symptoms or a dedicated input.
+    const symptomsDescription = medicalHistory.length > 0 && medicalHistory[0]?.symptomes ? medicalHistory[0].symptomes : "Symptômes généraux du patient (pas de dossier récent spécifié)."; 
+    
+    if (!symptomsDescription || symptomsDescription.length < 10) {
+      toast.error("Description des symptômes insuffisante pour une analyse IA.", {
+        description: "Veuillez sélectionner un dossier médical avec des symptômes ou fournir une description plus détaillée."
+      });
+      setPatientEmergencyError("Description des symptômes insuffisante (min. 10 caractères).");
+      setIsAiAnalysisDialogOpen(true);
       return;
     }
 
+    console.log('[PatientDetailPage] handleEmergencyAI called with description:', symptomsDescription);
     setIsAnalyzingPatientEmergency(true);
     setPatientEmergencyAnalysis(null);
     setPatientEmergencyError(null);
@@ -305,13 +312,12 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
       const result = await analyzeEmergencyCase({ description: symptomsDescription });
       setPatientEmergencyAnalysis(result);
       toast.success("Analyse IA terminée avec succès.");
-    } catch (error: any)
-{
+    } catch (error: any) {
       console.error("[PatientDetailPage] Error analyzing patient emergency case:", error);
       let userFriendlyMessage = "Une erreur inconnue est survenue lors de l'analyse IA.";
       if (error instanceof Error || (error && typeof error.message === 'string')) {
-        if (error.message.toLowerCase().includes("not_found") && error.message.toLowerCase().includes("model")) {
-          userFriendlyMessage = "Le modèle d'IA spécifié n'a pas été trouvé ou n'est pas accessible.\nConseils :\n1. Vérifiez que votre GOOGLE_API_KEY dans le fichier .env est correcte et active.\n2. Assurez-vous que l'API \"Generative Language\" ou \"Vertex AI\" est activée dans votre projet Google Cloud.\n3. Le modèle demandé (ex: 'gemini-pro') doit être disponible pour votre compte et région.";
+         if (error.message.toLowerCase().includes("not_found") && error.message.toLowerCase().includes("model")) {
+          userFriendlyMessage = "Le modèle d'IA spécifié n'a pas été trouvé ou n'est pas accessible.\nConseils :\n1. Vérifiez que votre GOOGLE_API_KEY dans le fichier .env est correcte, active et autorisée à utiliser les modèles Gemini.\n2. Assurez-vous que l'API \"Generative Language\" ou \"Vertex AI\" est activée dans votre projet Google Cloud.\n3. Le modèle demandé (ex: 'gemini-pro') doit être disponible pour votre compte et région.";
         } else if (error.message.toLowerCase().includes("permission_denied")) {
             userFriendlyMessage = "Permission refusée par le service IA. Vérifiez que votre GOOGLE_API_KEY a les droits nécessaires.";
         } else if (error.message.toLowerCase().includes("invalid_argument") && error.message.toLowerCase().includes("api key not valid")) {
@@ -338,16 +344,17 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
       telephone: patient.phone || "Non renseigné",
       email: patient.email || "Non renseigné",
     },
-    doctorInfo: { // Placeholder
-      nom: "Dr. Alpha",
-      specialite: "Médecine Générale",
+    doctorInfo: { 
+      nom: "Dr. Alpha", // Placeholder
+      specialite: "Médecine Générale", // Placeholder
     },
-    consultationDate: new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' }),
-    symptomes: "Fièvre, toux (données exemples)", // Placeholder
-    diagnostic: "Grippe saisonnière (données exemples)", // Placeholder
-    traitement: [{ medicament: "Paracétamol", posologie: "1g 3x/jour (données exemples)" }], // Placeholder
-    conseils: "Reposez-vous bien, hydratez-vous (données exemples).", // Placeholder
-    prochainRendezVous: "Dans 7 jours si pas d'amélioration (données exemples).", // Placeholder
+    // These details should ideally come from a selected medical record
+    consultationDate: medicalHistory[0]?.consultationDate ? format(medicalHistory[0].consultationDate.toDate(), 'dd MMMM yyyy', { locale: fr }) : new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' }),
+    symptomes: medicalHistory[0]?.symptomes || "Non spécifiés (données exemples)",
+    diagnostic: medicalHistory[0]?.diagnostic || "Non spécifié (données exemples)",
+    traitement: medicalHistory[0]?.traitementPrescrit ? [{ medicament: medicalHistory[0].traitementPrescrit, posologie: "Selon prescription" }] : [{ medicament: "Paracétamol", posologie: "1g 3x/jour (données exemples)" }],
+    conseils: "Reposez-vous bien, hydratez-vous (données exemples).", 
+    prochainRendezVous: "Dans 7 jours si pas d'amélioration (données exemples).", 
   } : null;
 
 
@@ -391,11 +398,11 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
           </Button>
           <Button 
             onClick={handleEmergencyAI} 
-            variant="destructive" 
-            disabled={true} // Temporarily disabled, see TODO above
+            variant="outline" 
+            disabled={isAnalyzingPatientEmergency}
           >
             <BrainCircuit className="mr-2 h-5 w-5" />
-            Évaluer Urgence (IA)
+            {isAnalyzingPatientEmergency ? "Analyse IA en cours..." : "Évaluer Urgence (IA)"}
           </Button>
         </div>
       </div>
@@ -415,9 +422,6 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
             <p><strong>Email :</strong> {patient.email || "Non renseigné"}</p>
           </CardContent>
         </Card>
-        
-        {/* Section "État Actuel" et "Prescriptions" retirées pour l'instant, car ces données proviendront des dossiers médicaux.
-            Nous les ajouterons lors de l'affichage détaillé d'un dossier médical. */}
       </div>
 
       <Card>
@@ -434,12 +438,15 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
                     <h4 className="font-semibold">
                       Consultation du {format(entry.consultationDate.toDate(), 'dd MMMM yyyy à HH:mm', { locale: fr })}
                     </h4>
-                    {/* TODO: Ajouter un bouton pour voir les détails complets de ce dossier médical */}
-                    <Button variant="outline" size="sm" disabled>Voir Détails Dossier</Button>
+                    <Button variant="outline" size="sm" asChild>
+                       <Link href={`/medical-records/${entry.id}`}>
+                         <Eye className="mr-2 h-4 w-4" />
+                         Voir Détails Dossier
+                       </Link>
+                    </Button>
                   </div>
                   {entry.motifConsultation && <p className="text-sm"><strong>Motif :</strong> {entry.motifConsultation}</p>}
                   {entry.diagnostic && <p className="text-sm"><strong>Diagnostic :</strong> {entry.diagnostic}</p>}
-                  {/* Pourrait afficher d'autres infos résumées ici */}
                 </li>
               ))}
             </ul>
@@ -450,7 +457,7 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
       </Card>
       
       <HealthReportDialog 
-        reportData={mockHealthReportData} // Still uses mock data, will be updated when a specific record is selected
+        reportData={mockHealthReportData} 
         open={isReportDialogOpen}
         onOpenChange={setIsReportDialogOpen}
       />
@@ -465,4 +472,3 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
     </div>
   );
 }
-
