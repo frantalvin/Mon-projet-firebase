@@ -366,7 +366,8 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
     prochainRendezVous: "Dans 7 jours si pas d'amélioration (données exemples).", 
   } : null;
 
-  const newConsultationLink = patientId ? `/patients/${patientId}/medical-records/new` : '#';
+  // Corrected link to /medical-records/new/[patientId]
+  const newConsultationLink = patientId ? `/medical-records/new/${patientId}` : '#';
   console.log('[PatientDetailPage] Link to New Consultation will be:', newConsultationLink);
 
 
@@ -454,8 +455,8 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
             </Button>
             <Button 
               onClick={handleEmergencyAI} 
-              variant="default"
-              disabled={isAnalyzingPatientEmergency || !patient}
+              variant="default" // Changed to default for better visual distinction
+              disabled={isAnalyzingPatientEmergency || !patient || medicalHistory.length === 0} // Also disable if no medical history for symptoms
               className="w-full sm:w-auto"
             >
               <BrainCircuit className="mr-2 h-5 w-5" />
