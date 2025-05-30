@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import { Inter as FontSans } from 'next/font/google';
 import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/theme-provider';
-// import { AppProvider } from '@/contexts/app-context'; // Temporarily commented out
-// import { Toaster } from '@/components/ui/toaster'; // Temporarily commented out
+import { AppProvider } from '@/contexts/app-context'; // Réactivé
+import { Toaster } from '@/components/ui/toaster'; // Réactivé
 import './globals.css';
 
 const fontSans = FontSans({
@@ -31,14 +31,14 @@ export default function RootLayout({
       >
         <ThemeProvider
           attribute="class"
-          forcedTheme="light" // Keep forcing light theme for debugging
-          enableSystem={false} // Keep system detection off for debugging
-          disableTransitionOnChange // Keep transitions disabled
+          forcedTheme="light" // Garder pour forcer le thème clair pour le débogage
+          enableSystem={false} // Garder désactivé pour le débogage
+          disableTransitionOnChange // Garder pour éviter les transitions pendant le débogage
         >
-          {/* <AppProvider> */}
+          <AppProvider> {/* Réactivé */}
             {children}
-            {/* <Toaster /> */}
-          {/* </AppProvider> */}
+            <Toaster /> {/* Réactivé */}
+          </AppProvider>
         </ThemeProvider>
       </body>
     </html>
