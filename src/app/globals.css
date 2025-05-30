@@ -73,7 +73,15 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
-    /* Ensure no global transitions on background/color that could cause flickering */
+    /* Assurez-vous qu'il n'y a pas de transitions globales sur background/color ici */
+    /* qui pourraient causer des scintillements. */
+    /* Exemple de ce qu'il NE FAUT PAS avoir si cela cause des problèmes : */
+    /* transition-property: background-color, color; */
+    /* transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); */
+    /* transition-duration: 150ms; */
+  }
+  /* De même pour html, par précaution */
+  html {
     /* transition-property: background-color, color; */
     /* transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); */
     /* transition-duration: 150ms; */
