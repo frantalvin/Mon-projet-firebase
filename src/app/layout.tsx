@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import { Inter as FontSans } from 'next/font/google';
 import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/theme-provider';
-import { AppProvider } from '@/contexts/app-context';
-import { Toaster } from '@/components/ui/toaster';
+// import { AppProvider } from '@/contexts/app-context'; // Temporarily commented out
+// import { Toaster } from '@/components/ui/toaster'; // Temporarily commented out
 import './globals.css';
 
 const fontSans = FontSans({
@@ -31,14 +31,14 @@ export default function RootLayout({
       >
         <ThemeProvider
           attribute="class"
-          forcedTheme="light" // Force le thème clair pour le débogage du scintillement
-          enableSystem={false} // Maintient la détection système désactivée pour l'instant
-          disableTransitionOnChange // Empêche les transitions lors des changements de thème
+          forcedTheme="light" // Keep forcing light theme for debugging
+          enableSystem={false} // Keep system detection off for debugging
+          disableTransitionOnChange // Keep transitions disabled
         >
-          <AppProvider>
+          {/* <AppProvider> */}
             {children}
-            <Toaster />
-          </AppProvider>
+            {/* <Toaster /> */}
+          {/* </AppProvider> */}
         </ThemeProvider>
       </body>
     </html>
