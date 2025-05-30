@@ -31,9 +31,10 @@ export default function RootLayout({
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="light" // Forcer le thème clair
-          // enableSystem // Temporairement désactivé pour le diagnostic
-          disableTransitionOnChange
+          defaultTheme="light" // Gardons un défaut, même si forcedTheme est prioritaire
+          enableSystem={false} // Désactivons la détection système pour ce test
+          disableTransitionOnChange // Important pour éviter les transitions pendant le changement de thème
+          forcedTheme="light" // Forcer le thème clair pour le diagnostic
         >
           <AppProvider>
             {children}
