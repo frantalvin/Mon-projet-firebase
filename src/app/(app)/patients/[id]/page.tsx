@@ -1,9 +1,10 @@
+
 // src/app/(app)/patients/[id]/page.tsx
 'use client';
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BrainCircuit, FileText, Printer, Terminal, AlertTriangle, Loader2, Eye, ArrowLeft, PlusCircle } from "lucide-react";
+import { BrainCircuit, FileText, Printer, Terminal, AlertTriangle, Loader2, Eye, ArrowLeft } from "lucide-react"; // Removed PlusCircle
 import { use, useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -20,7 +21,7 @@ interface PatientFirestoreData {
   id: string;
   lastName: string;
   firstName: string;
-  dob: string; // Stored as yyyy-MM-dd string
+  dob: string; 
   sexe?: string;
   adresse?: string;
   phone?: string;
@@ -268,8 +269,7 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
         console.log("[PatientDetailPage] Medical history fetched:", fetchedMedicalHistory);
         setMedicalHistory(fetchedMedicalHistory);
 
-      } catch (err: any)
-{
+      } catch (err: any) {
         console.error("[PatientDetailPage] Error fetching patient data or medical history:", err);
         let errorMessage = `Erreur lors de la récupération des données du patient : ${err.message || "Erreur inconnue."}.`;
         if (err.code === 'permission-denied' || (err.message && err.message.toLowerCase().includes("permission"))) {
@@ -366,10 +366,6 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
     prochainRendezVous: "Dans 7 jours si pas d'amélioration (données exemples).", 
   } : null;
 
-  // Corrected link to /medical-records/new/[patientId]
-  const newConsultationLink = patientId ? `/medical-records/new/${patientId}` : '#';
-  console.log('[PatientDetailPage] Link to New Consultation will be:', newConsultationLink);
-
 
   if (isLoading) {
     return (
@@ -436,27 +432,15 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
             <CardTitle>Actions Rapides</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-            {patientId ? (
-              <Button asChild variant="outline" className="w-full sm:w-auto">
-                <Link href={newConsultationLink}>
-                  <PlusCircle className="mr-2 h-5 w-5" />
-                  Nouvelle Consultation
-                </Link>
-              </Button>
-            ) : (
-              <Button variant="outline" className="w-full sm:w-auto" disabled>
-                <PlusCircle className="mr-2 h-5 w-5" />
-                Nouvelle Consultation
-              </Button>
-            )}
+            {/* Bouton Nouvelle Consultation a été déplacé vers PatientsTabContent */}
             <Button onClick={handleOpenReportDialog} variant="outline" className="w-full sm:w-auto" disabled={!patient}>
               <FileText className="mr-2 h-5 w-5" />
               Formulaire de Santé
             </Button>
             <Button 
               onClick={handleEmergencyAI} 
-              variant="default" // Changed to default for better visual distinction
-              disabled={isAnalyzingPatientEmergency || !patient || medicalHistory.length === 0} // Also disable if no medical history for symptoms
+              variant="default"
+              disabled={isAnalyzingPatientEmergency || !patient || medicalHistory.length === 0}
               className="w-full sm:w-auto"
             >
               <BrainCircuit className="mr-2 h-5 w-5" />
@@ -516,3 +500,5 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
     </div>
   );
 }
+
+    

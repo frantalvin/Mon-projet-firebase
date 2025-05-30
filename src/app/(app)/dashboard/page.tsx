@@ -13,10 +13,10 @@ import { useState, useEffect, Suspense, useMemo } from "react";
 import type { EmergencyCaseAnalysis } from "@/ai/flows/emergency-flow";
 import { analyzeEmergencyCase } from "@/ai/flows/emergency-flow";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, BrainCircuit, Users, CalendarDays, LineChartIcon, ShieldCheck, PlusCircle, Eye, Search, FileText } from "lucide-react"; // Added FileText
+import { Terminal, BrainCircuit, Users, CalendarDays, LineChartIcon, ShieldCheck, PlusCircle, Eye, Search, FileText } from "lucide-react";
 import Link from 'next/link';
 import { db } from "@/lib/firebase";
-import { collection, getDocs, query, orderBy, Timestamp, doc, getDoc } from "firebase/firestore"; // Added doc, getDoc
+import { collection, getDocs, query, orderBy, Timestamp, doc, getDoc } from "firebase/firestore";
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -45,37 +45,13 @@ function DashboardTabContent() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // Fetch active patients count
         const patientsSnapshot = await getDocs(collection(db, "patients"));
         setActivePatients(patientsSnapshot.size);
-
-        // Fetch appointments for today
-        const today = new Date();
-        const startOfToday = new Date(today.setHours(0, 0, 0, 0));
-        const endOfToday = new Date(today.setHours(23, 59, 59, 999));
-        
-        // This query might need adjustment if 'dateTime' is not directly comparable
-        // or if you need a more complex query for "today's" appointments.
-        // For simplicity, assuming 'dateTime' is a Firestore Timestamp.
-        // This query will be difficult without composite indexes if you query ranges on different fields.
-        // A simpler approach for "appointmentsToday" might be to fetch all upcoming and filter client-side,
-        // or to have a dedicated field/collection for daily summaries if performance is critical.
-        // For now, let's keep it simple; this might require a Firestore index.
-        /*
-        const appointmentsQuery = query(
-          collection(db, "appointments"),
-          where("dateTime", ">=", Timestamp.fromDate(startOfToday)),
-          where("dateTime", "<=", Timestamp.fromDate(endOfToday))
-        );
-        const appointmentsSnapshot = await getDocs(appointmentsQuery);
-        setAppointmentsToday(appointmentsSnapshot.size);
-        */
-        // Placeholder for appointments today as the query above is complex
-        setAppointmentsToday(5); // Placeholder
+        // Placeholder for appointments today
+        setAppointmentsToday(5); 
 
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
-        // Handle error appropriately
       }
     };
     fetchDashboardData();
@@ -201,8 +177,8 @@ function DashboardTabContent() {
               <h3 className="text-lg font-semibold">Résultat de l'Analyse IA :</h3>
               <p><strong>Priorité :</strong> <span className={
                 emergencyAnalysis.priority === "Élevée" ? "text-destructive font-bold" :
-                emergencyAnalysis.priority === "Moyenne" ? "text-yellow-600 font-bold" : // Note: text-yellow-600 might not be themed
-                emergencyAnalysis.priority === "Faible" ? "text-green-600 font-bold" : "" // Note: text-green-600 might not be themed
+                emergencyAnalysis.priority === "Moyenne" ? "text-yellow-600 font-bold" : 
+                emergencyAnalysis.priority === "Faible" ? "text-green-600 font-bold" : "" 
               }>{emergencyAnalysis.priority}</span></p>
               <p><strong>Justification :</strong> {emergencyAnalysis.reasoning}</p>
               <div>
@@ -225,10 +201,10 @@ interface PatientData {
   id: string;
   firstName: string;
   lastName: string;
-  dob: string; // Stored as yyyy-MM-dd string
+  dob: string; 
   phone?: string;
   email?: string;
-  createdAt?: Timestamp; // Firestore Timestamp
+  createdAt?: Timestamp; 
 }
 
 function PatientsTabContent() {
@@ -350,18 +326,24 @@ function PatientsTabContent() {
             <ul className="space-y-3">
               {filteredPatients.map((patient) => {
                 const patientDetailUrl = `/patients/${patient.id}`;
-                console.log(`[PatientsTabContent] Rendering patient: ${patient.firstName} ${patient.lastName}, Link Href: ${patientDetailUrl}`);
+                const newConsultationUrl = `/medical-records/new/${patient.id}`;
+                console.log(`[PatientsTabContent] Rendering patient: ${patient.firstName} ${patient.lastName}, Link Href: ${patientDetailUrl}, New Consultation Href: ${newConsultationUrl}`);
                 return (
-                  <li key={patient.id} className="p-4 border rounded-lg flex justify-between items-center hover:bg-muted/50">
-                    <div>
+                  <li key={patient.id} className="p-4 border rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center hover:bg-muted/50">
+                    <div className="mb-2 sm:mb-0">
                       <h3 className="font-semibold">{patient.lastName}, {patient.firstName}</h3>
                       <p className="text-sm text-muted-foreground">
                         Date de Naissance: {patient.dob ? format(new Date(patient.dob), 'dd MMMM yyyy', { locale: fr }) : 'N/A'}
                       </p>
                     </div>
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href={patientDetailUrl}><Eye className="mr-2 h-4 w-4" />Voir Fiche</Link>
-                    </Button>
+                    <div className="flex space-x-2">
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={patientDetailUrl}><Eye className="mr-2 h-4 w-4" />Voir Fiche</Link>
+                      </Button>
+                      <Button variant="default" size="sm" asChild>
+                        <Link href={newConsultationUrl}><PlusCircle className="mr-2 h-4 w-4" />Nouv. Consultation</Link>
+                      </Button>
+                    </div>
                   </li>
                 );
               })}
@@ -375,10 +357,10 @@ function PatientsTabContent() {
 
 interface AppointmentData {
   id: string;
-  patientName: string; // Could be a patientId to fetch more details
-  doctorName: string; // Could be a staffId
-  dateTime: Timestamp; // Firestore Timestamp
-  status: 'Prévu' | 'Terminé' | 'Annulé' | string; // string for flexibility
+  patientName: string; 
+  doctorName: string; 
+  dateTime: Timestamp; 
+  status: 'Prévu' | 'Terminé' | 'Annulé' | string; 
   reason?: string;
 }
 
@@ -606,11 +588,11 @@ function MainAppPage() {
         </div>
 
         <div className="flex-grow overflow-y-auto p-1">
-          {currentTab === 'dashboard' && <TabsContent value="dashboard" className="mt-0">{tabContents.dashboard}</TabsContent>}
-          {currentTab === 'patients' && <TabsContent value="patients" className="mt-0">{tabContents.patients}</TabsContent>}
-          {currentTab === 'appointments' && <TabsContent value="appointments" className="mt-0">{tabContents.appointments}</TabsContent>}
-          {currentTab === 'statistics' && <TabsContent value="statistics" className="mt-0">{tabContents.statistics}</TabsContent>}
-          {currentTab === 'admin' && <TabsContent value="admin" className="mt-0">{tabContents.admin}</TabsContent>}
+          {Object.keys(tabContents).map(tabKey => (
+            <TabsContent key={tabKey} value={tabKey} className="mt-0" style={{ display: currentTab === tabKey ? 'block' : 'none' }}>
+              {tabContents[tabKey as keyof typeof tabContents]}
+            </TabsContent>
+          ))}
         </div>
       </Tabs>
     </div>
@@ -624,3 +606,5 @@ export default function DashboardPage() {
     </Suspense>
   );
 }
+
+    

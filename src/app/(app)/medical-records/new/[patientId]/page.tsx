@@ -1,3 +1,4 @@
+
 // src/app/(app)/medical-records/new/[patientId]/page.tsx
 'use client';
 
@@ -18,8 +19,8 @@ import { CalendarIcon, ArrowLeft, Loader2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp, Timestamp, doc, getDoc } from "firebase/firestore";
-import { useState, useEffect } from "react";
-import { useRouter, useParams } from 'next/navigation';
+import { useState, useEffect, use } from "react"; // Added 'use'
+import { useRouter } from 'next/navigation'; // No need for useParams, use 'params' prop
 import Link from "next/link";
 import { Alert, AlertTitle, AlertDescription as UiAlertDescription } from "@/components/ui/alert";
 
@@ -42,11 +43,10 @@ interface PatientInfo {
   lastName: string;
 }
 
-// Renamed component to avoid potential conflicts if file name casing differs from import
-export default function NewMedicalRecordEntryPage() {
+export default function NewMedicalRecordEntryPage({ params: paramsProp }: { params: { patientId: string } }) {
   const router = useRouter();
-  const params = useParams(); 
-  const patientIdFromParams = params.patientId as string; 
+  const resolvedParams = use(paramsProp); // Use React.use to unwrap params promise
+  const patientIdFromParams = resolvedParams?.patientId; 
   console.log('[NewMedicalRecordEntryPage] patientIdFromParams from URL:', patientIdFromParams);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -331,3 +331,5 @@ export default function NewMedicalRecordEntryPage() {
     </div>
   );
 }
+
+    
