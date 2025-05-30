@@ -1,4 +1,3 @@
-
 // src/app/(app)/patients/[id]/page.tsx
 'use client';
 
@@ -27,8 +26,6 @@ interface PatientFirestoreData {
   phone?: string;
   email?: string;
   createdAt?: Timestamp;
-  // Add other fields as needed from your Firestore structure
-  // e.g., numSecu, groupeSanguin, antecedents, allergies, etc.
 }
 
 interface MedicalRecordFirestoreData {
@@ -38,11 +35,11 @@ interface MedicalRecordFirestoreData {
   motifConsultation?: string;
   diagnostic?: string;
   symptomes?: string;
-  traitementPrescrit?: string; // Could be an array of objects if detailed
+  traitementPrescrit?: string;
   notesMedecin?: string;
   createdAt?: Timestamp;
-  doctorName?: string; // Example field, you might have doctorId instead
-  doctorSpecialty?: string; // Example field
+  doctorName?: string;
+  doctorSpecialty?: string;
 }
 
 
@@ -216,7 +213,8 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
   console.log('[PatientDetailPage] Component rendering. Raw paramsProp:', paramsProp);
   const resolvedParams = use(paramsProp); 
   const patientId = resolvedParams?.id;
-  console.log('[PatientDetailPage] Resolved patientId:', patientId);
+  console.log('[PatientDetailPage] Resolved params:', resolvedParams);
+  console.log('[PatientDetailPage] Resolved patientId for links and fetching:', patientId);
 
 
   const [patient, setPatient] = useState<PatientFirestoreData | null>(null);
@@ -270,11 +268,14 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
         console.log("[PatientDetailPage] Medical history fetched:", fetchedMedicalHistory);
         setMedicalHistory(fetchedMedicalHistory);
 
-      } catch (err: any) {
+      } catch (err: any)
+{
         console.error("[PatientDetailPage] Error fetching patient data or medical history:", err);
-        let errorMessage = `Erreur lors de la récupération des données du patient : ${err.message}.`;
+        let errorMessage = `Erreur lors de la récupération des données du patient : ${err.message || "Erreur inconnue."}.`;
         if (err.code === 'permission-denied' || (err.message && err.message.toLowerCase().includes("permission"))) {
             errorMessage += " Veuillez vérifier vos règles de sécurité Firestore et vous assurer que l'utilisateur authentifié a les droits de lecture.";
+        } else if (err.message && err.message.includes("requires an index")) {
+            errorMessage += " Une requête nécessite un index Firestore qui n'existe pas. Veuillez vérifier la console Firebase pour un lien de création d'index.";
         }
         setError(errorMessage);
       } finally {
@@ -365,6 +366,9 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
     prochainRendezVous: "Dans 7 jours si pas d'amélioration (données exemples).", 
   } : null;
 
+  const newConsultationLink = patientId ? `/patients/${patientId}/medical-records/new` : '#';
+  console.log('[PatientDetailPage] Link to New Consultation will be:', newConsultationLink);
+
 
   if (isLoading) {
     return (
@@ -393,7 +397,7 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
       <Alert variant="destructive" className="m-4">
         <AlertTriangle className="h-4 w-4" />
         <AlertTitle>Patient Introuvable</AlertTitle>
-        <UiAlertDescription>Aucun patient trouvé avec l'ID {patientId}. Veuillez vérifier l'ID ou retourner à la liste des patients.</UiAlertDescription>
+        <UiAlertDescription>Aucun patient trouvé avec l'ID {patientId || "inconnu"}. Veuillez vérifier l'ID ou retourner à la liste des patients.</UiAlertDescription>
         <Button variant="outline" asChild className="mt-4">
           <Link href="/dashboard?tab=patients"><ArrowLeft className="mr-2 h-4 w-4" /> Retour à la liste des patients</Link>
         </Button>
@@ -431,20 +435,27 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
             <CardTitle>Actions Rapides</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-            <Button asChild variant="outline" className="w-full sm:w-auto">
-              <Link href={`/patients/${patientId}/medical-records/new`}>
+            {patientId ? (
+              <Button asChild variant="outline" className="w-full sm:w-auto">
+                <Link href={newConsultationLink}>
+                  <PlusCircle className="mr-2 h-5 w-5" />
+                  Nouvelle Consultation
+                </Link>
+              </Button>
+            ) : (
+              <Button variant="outline" className="w-full sm:w-auto" disabled>
                 <PlusCircle className="mr-2 h-5 w-5" />
                 Nouvelle Consultation
-              </Link>
-            </Button>
-            <Button onClick={handleOpenReportDialog} variant="outline" className="w-full sm:w-auto">
+              </Button>
+            )}
+            <Button onClick={handleOpenReportDialog} variant="outline" className="w-full sm:w-auto" disabled={!patient}>
               <FileText className="mr-2 h-5 w-5" />
               Formulaire de Santé
             </Button>
             <Button 
               onClick={handleEmergencyAI} 
               variant="default"
-              disabled={isAnalyzingPatientEmergency}
+              disabled={isAnalyzingPatientEmergency || !patient}
               className="w-full sm:w-auto"
             >
               <BrainCircuit className="mr-2 h-5 w-5" />
@@ -467,13 +478,13 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
                   <div className="flex justify-between items-center">
                     <div>
                         <h4 className="font-semibold">
-                        Consultation du {format(entry.consultationDate.toDate(), 'dd MMMM yyyy à HH:mm', { locale: fr })}
+                        Consultation du {entry.consultationDate ? format(entry.consultationDate.toDate(), 'dd MMMM yyyy à HH:mm', { locale: fr }) : 'Date inconnue'}
                         </h4>
                         {entry.motifConsultation && <p className="text-sm"><strong>Motif :</strong> {entry.motifConsultation}</p>}
                         {entry.diagnostic && <p className="text-sm"><strong>Diagnostic :</strong> {entry.diagnostic}</p>}
                     </div>
-                    <Button variant="outline" size="sm" asChild>
-                       <Link href={`/medical-records/${entry.id}`}>
+                    <Button variant="outline" size="sm" asChild disabled={!entry.id}>
+                       <Link href={entry.id ? `/medical-records/${entry.id}` : '#'}>
                          <Eye className="mr-2 h-4 w-4" />
                          Voir Détails Dossier
                        </Link>

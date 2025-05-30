@@ -1,4 +1,3 @@
-
 // src/app/(app)/patients/[patientId]/medical-records/new/page.tsx
 'use client';
 
@@ -15,14 +14,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { fr } from 'date-fns/locale';
-import { CalendarIcon, ArrowLeft, Loader2, AlertTriangle } from "lucide-react"; // Added AlertTriangle
+import { CalendarIcon, ArrowLeft, Loader2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp, Timestamp, doc, getDoc } from "firebase/firestore";
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from 'next/navigation';
 import Link from "next/link";
-import { Alert, AlertTitle, AlertDescription as UiAlertDescription } from "@/components/ui/alert"; // Correctly aliased
+import { Alert, AlertTitle, AlertDescription as UiAlertDescription } from "@/components/ui/alert";
 
 const medicalRecordFormSchema = z.object({
   consultationDate: z.date({
@@ -45,36 +44,49 @@ interface PatientInfo {
 export default function NewMedicalRecordPage() {
   const router = useRouter();
   const params = useParams(); 
-  const patientId = params.patientId as string; 
+  const patientIdFromParams = params.patientId as string; 
+  console.log('[NewMedicalRecordPage] patientIdFromParams from URL:', patientIdFromParams);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [patientInfo, setPatientInfo] = useState<PatientInfo | null>(null);
   const [isLoadingPatient, setIsLoadingPatient] = useState(true);
+  const [pageError, setPageError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (patientId) {
+    console.log('[NewMedicalRecordPage] useEffect triggered. patientIdFromParams:', patientIdFromParams);
+    if (patientIdFromParams) {
       const fetchPatientInfo = async () => {
         setIsLoadingPatient(true);
+        setPageError(null);
         try {
-          const patientDocRef = doc(db, "patients", patientId);
+          const patientDocRef = doc(db, "patients", patientIdFromParams);
           const patientDocSnap = await getDoc(patientDocRef);
           if (patientDocSnap.exists()) {
             setPatientInfo(patientDocSnap.data() as PatientInfo);
+            console.log('[NewMedicalRecordPage] Patient info loaded:', patientDocSnap.data());
           } else {
-            toast.error("Patient non trouvé.", { description: `Aucun patient avec l'ID ${patientId} n'a été trouvé.` });
+            const errorMsg = `Patient non trouvé avec l'ID : ${patientIdFromParams}`;
+            toast.error("Patient non trouvé.", { description: errorMsg });
+            setPageError(errorMsg);
+            console.warn('[NewMedicalRecordPage]', errorMsg);
           }
-        } catch (error) {
-          console.error("Erreur lors de la récupération des informations du patient:", error);
+        } catch (error: any) {
+          const errorMsg = `Erreur de chargement du patient: ${error.message}`;
+          console.error("[NewMedicalRecordPage] Erreur lors de la récupération des informations du patient:", error);
           toast.error("Erreur de chargement du patient.");
+          setPageError(errorMsg);
         } finally {
           setIsLoadingPatient(false);
         }
       };
       fetchPatientInfo();
     } else {
-      setIsLoadingPatient(false); // Also set loading to false if no patientId
+      const errorMsg = "ID du patient manquant dans l'URL.";
+      console.error('[NewMedicalRecordPage]', errorMsg);
+      setPageError(errorMsg);
+      setIsLoadingPatient(false);
     }
-  }, [patientId]);
+  }, [patientIdFromParams]);
 
   const form = useForm<MedicalRecordFormValues>({
     resolver: zodResolver(medicalRecordFormSchema),
@@ -89,28 +101,35 @@ export default function NewMedicalRecordPage() {
   });
 
   async function onSubmit(data: MedicalRecordFormValues) {
-    if (!patientId) {
+    if (!patientIdFromParams) {
       toast.error("Erreur : ID du patient manquant.");
+      console.error('[NewMedicalRecordPage] onSubmit: patientIdFromParams is missing');
       return;
     }
+    if (!patientInfo) {
+      toast.error("Erreur : Informations du patient non chargées.");
+      console.error('[NewMedicalRecordPage] onSubmit: patientInfo is null');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const medicalRecordData = {
         ...data,
-        patientId: patientId,
+        patientId: patientIdFromParams,
         consultationDate: Timestamp.fromDate(data.consultationDate),
         createdAt: serverTimestamp(),
-        // updatedAt: serverTimestamp(), // Not strictly necessary on creation, can be added for updates
       };
 
+      console.log('[NewMedicalRecordPage] Submitting medical record data:', medicalRecordData);
       const docRef = await addDoc(collection(db, "dossiersMedicaux"), medicalRecordData);
       toast.success("Dossier médical enregistré avec succès!", {
         description: `Nouveau dossier créé pour ${patientInfo?.firstName || ''} ${patientInfo?.lastName || ''} (ID: ${docRef.id})`,
       });
       form.reset();
-      router.push(`/patients/${patientId}`); 
-    } catch (error) {
-      console.error("Erreur lors de l'enregistrement du dossier médical :", error);
+      router.push(`/patients/${patientIdFromParams}`); 
+    } catch (error: any) {
+      console.error("[NewMedicalRecordPage] Erreur lors de l'enregistrement du dossier médical :", error);
       toast.error("Erreur lors de l'enregistrement du dossier.", {
         description: error instanceof Error ? error.message : "Une erreur inconnue est survenue.",
       });
@@ -128,15 +147,13 @@ export default function NewMedicalRecordPage() {
     );
   }
 
-  if (!patientId) {
+  if (pageError) {
     return (
       <div className="container mx-auto py-10 text-center">
         <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Erreur de Navigation</AlertTitle>
-            <UiAlertDescription>
-                L'ID du patient n'a pas été fourni dans l'URL.
-            </UiAlertDescription>
+            <AlertTitle>Erreur</AlertTitle>
+            <UiAlertDescription>{pageError}</UiAlertDescription>
         </Alert>
         <Button variant="outline" asChild className="mt-4">
             <Link href="/dashboard?tab=patients">
@@ -147,15 +164,14 @@ export default function NewMedicalRecordPage() {
     );
   }
   
-  if (!patientInfo && !isLoadingPatient) {
+  if (!patientInfo) { // Double check after loading and no pageError
      return (
       <div className="container mx-auto py-10 text-center">
         <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Patient introuvable</AlertTitle>
-            {/* Corrected to use UiAlertDescription */}
             <UiAlertDescription> 
-                L'ID du patient fourni ({patientId}) n'est pas valide ou le patient n'existe pas.
+                Les informations du patient n'ont pas pu être chargées pour l'ID : {patientIdFromParams || "inconnu"}.
             </UiAlertDescription>
         </Alert>
         <Button variant="outline" asChild className="mt-4">
@@ -171,7 +187,7 @@ export default function NewMedicalRecordPage() {
   return (
     <div className="container mx-auto py-10">
        <Button variant="outline" size="sm" asChild className="mb-4">
-         <Link href={patientId ? `/patients/${patientId}` : "/dashboard?tab=patients"}>
+         <Link href={patientIdFromParams ? `/patients/${patientIdFromParams}` : "/dashboard?tab=patients"}>
            <ArrowLeft className="mr-2 h-4 w-4" />
            Retour à la Fiche Patient
          </Link>
@@ -181,7 +197,7 @@ export default function NewMedicalRecordPage() {
           <CardTitle>Nouvelle Consultation / Entrée au Dossier Médical</CardTitle>
           {patientInfo && (
             <CardDescription>
-              Ajout d'une nouvelle entrée pour le patient : {patientInfo.firstName} {patientInfo.lastName} (ID: {patientId})
+              Ajout d'une nouvelle entrée pour le patient : {patientInfo.firstName} {patientInfo.lastName} (ID: {patientIdFromParams})
             </CardDescription>
           )}
         </CardHeader>
