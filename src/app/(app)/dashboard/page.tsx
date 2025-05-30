@@ -337,6 +337,8 @@ function PatientsTabContent() {
               {filteredPatients.map((patient) => {
                 const patientDetailUrl = `/patients/${patient.id}`;
                 console.log(`[PatientsTabContent] Rendering patient: ${patient.firstName} ${patient.lastName}, Link Href: ${patientDetailUrl}`);
+                const newConsultationUrl = `/medical-records/new/${patient.id}`;
+                console.log(`[PatientsTabContent] New Consultation Href: ${newConsultationUrl}`);
                 return (
                   <li key={patient.id} className="p-4 border rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center hover:bg-muted/50">
                     <div className="mb-2 sm:mb-0">
@@ -345,9 +347,12 @@ function PatientsTabContent() {
                         Date de Naissance: {patient.dob ? format(new Date(patient.dob), 'dd MMMM yyyy', { locale: fr }) : 'N/A'}
                       </p>
                     </div>
-                    <div className="flex space-x-2">
+                    <div className="flex space-x-2 mt-2 sm:mt-0">
                       <Button variant="outline" size="sm" asChild>
                         <Link href={patientDetailUrl}><Eye className="mr-2 h-4 w-4" />Voir Fiche</Link>
+                      </Button>
+                       <Button size="sm" asChild>
+                        <Link href={newConsultationUrl}><PlusCircle className="mr-2 h-4 w-4" />Nouv. Consultation</Link>
                       </Button>
                     </div>
                   </li>
@@ -421,7 +426,7 @@ function AppointmentsTabContent() {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-semibold">Gestion des Rendez-vous</h1>
         <Button asChild>
-          <Link href="/dashboard?tab=new-medical-record">
+          <Link href="/dashboard?tab=new-medical-record"> 
             <PlusCircle className="mr-2 h-4 w-4" />Nouv. Dossier Médical
           </Link>
         </Button>
@@ -480,7 +485,7 @@ function AppointmentsTabContent() {
                       </td>
                       <td className="px-6 py-4">
                         <Button variant="outline" size="sm" asChild>
-                          <Link href={`/appointments/${rdv.id}`}><Eye className="mr-2 h-4 w-4" />Détails</Link>
+                           <Link href={`/appointments/${rdv.id}`}><Eye className="mr-2 h-4 w-4" />Détails</Link>
                         </Button>
                       </td>
                     </tr>
@@ -521,16 +526,24 @@ function NewMedicalRecordTabContent() {
       setIsLoadingPatients(true);
       try {
         const patientsCollectionRef = collection(db, "patients");
-        const q = query(patientsCollectionRef, orderBy("lastName", "asc"), orderBy("firstName", "asc"));
+        // SIMPLIFIED QUERY: Order only by lastName to potentially avoid needing a composite index immediately
+        const q = query(patientsCollectionRef, orderBy("lastName", "asc"));
         const querySnapshot = await getDocs(q);
         const fetchedPatients: PatientData[] = [];
         querySnapshot.forEach((doc) => {
           fetchedPatients.push({ id: doc.id, ...doc.data() } as PatientData);
         });
         setPatientsForSelect(fetchedPatients);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error fetching patients for select:", error);
-        toast.error("Erreur lors du chargement des patients.");
+        if (error.message && error.message.includes("requires an index")) {
+            toast.error("Erreur de chargement des patients : Index Firestore manquant.", {
+                description: "Un index est requis pour trier les patients. Veuillez créer l'index composite suggéré dans la console Firebase pour 'patients' (tri par lastName, puis firstName).",
+                duration: 10000,
+            });
+        } else {
+            toast.error("Erreur lors du chargement des patients.");
+        }
       } finally {
         setIsLoadingPatients(false);
       }
@@ -551,6 +564,7 @@ function NewMedicalRecordTabContent() {
   });
 
   useEffect(() => {
+    // Reset form when selectedPatientId changes or when the form is re-keyed
     form.reset({
         consultationDate: new Date(),
         motifConsultation: "",
@@ -559,8 +573,7 @@ function NewMedicalRecordTabContent() {
         traitementPrescrit: "",
         notesMedecin: "",
     });
-    setFormKey(Date.now()); 
-  }, [selectedPatientId, form]);
+  }, [selectedPatientId, formKey, form]);
 
 
   async function onSubmit(data: MedicalRecordFormValues) {
@@ -591,6 +604,7 @@ function NewMedicalRecordTabContent() {
       });
       form.reset();
       setSelectedPatientId(undefined); 
+      setFormKey(Date.now()); // Re-key to force re-render of form with default values
       router.push(`/patients/${selectedPatientId}`); 
     } catch (error: any) {
       console.error("[NewMedicalRecordTabContent] Erreur lors de l'enregistrement du dossier médical :", error);
@@ -602,9 +616,9 @@ function NewMedicalRecordTabContent() {
     }
   }
   
-  const patientName = patientsForSelect.find(p => p.id === selectedPatientId);
-  const pageTitle = selectedPatientId && patientName ? 
-    `Nouvelle Consultation pour : ${patientName.firstName} ${patientName.lastName}` : 
+  const patientNameForTitle = patientsForSelect.find(p => p.id === selectedPatientId);
+  const pageTitle = selectedPatientId && patientNameForTitle ? 
+    `Nouvelle Consultation pour : ${patientNameForTitle.firstName} ${patientNameForTitle.lastName}` : 
     "Nouvelle Consultation / Entrée au Dossier Médical";
 
   return (
@@ -615,7 +629,7 @@ function NewMedicalRecordTabContent() {
           <CardTitle>Saisir les informations de la consultation</CardTitle>
           {!selectedPatientId && (
             <CardDescription>
-              Veuillez d'abord sélectionner un patient.
+              Veuillez d'abord sélectionner un patient. Si la liste est vide ou si le patient est nouveau, vous devez d'abord l'enregistrer via l'onglet "Patients" puis "Nouveau Patient".
             </CardDescription>
           )}
         </CardHeader>
@@ -624,7 +638,10 @@ function NewMedicalRecordTabContent() {
             <Label htmlFor="patient-select">Sélectionner un Patient</Label>
             <Select
               value={selectedPatientId}
-              onValueChange={setSelectedPatientId}
+              onValueChange={(value) => {
+                setSelectedPatientId(value);
+                setFormKey(Date.now()); // Re-key form on patient selection
+              }}
               disabled={isLoadingPatients}
             >
               <SelectTrigger id="patient-select" className="w-full md:w-[300px]">
@@ -634,7 +651,7 @@ function NewMedicalRecordTabContent() {
                 {isLoadingPatients ? (
                   <SelectItem value="loading" disabled>Chargement...</SelectItem>
                 ) : patientsForSelect.length === 0 ? (
-                  <SelectItem value="no-patients" disabled>Aucun patient trouvé</SelectItem>
+                  <SelectItem value="no-patients" disabled>Aucun patient trouvé. Enregistrez-en un d'abord.</SelectItem>
                 ) : (
                   patientsForSelect.map(patient => (
                     <SelectItem key={patient.id} value={patient.id}>
@@ -644,10 +661,15 @@ function NewMedicalRecordTabContent() {
                 )}
               </SelectContent>
             </Select>
+             {!isLoadingPatients && patientsForSelect.length === 0 && (
+                <p className="text-sm text-muted-foreground mt-2">
+                    La liste des patients est vide. Vous devez d'abord <Link href="/patients/new" className="underline">enregistrer un nouveau patient</Link> avant de pouvoir créer un dossier médical.
+                </p>
+            )}
           </div>
 
           {selectedPatientId && (
-            <Form {...form} key={formKey}>
+            <Form {...form} key={formKey}> {/* Ensure form re-renders with new key */}
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                 <FormField
                   control={form.control}
@@ -848,7 +870,7 @@ function MainAppPage() {
       <Tabs defaultValue={currentTab} value={currentTab} className="flex-grow flex flex-col">
         <div className="overflow-x-auto sticky top-0 bg-background z-10 shadow-sm border-b mb-4">
           <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-max">
-            <TabsTrigger value="dashboard" asChild>
+             <TabsTrigger value="dashboard" asChild>
               <Link href="/dashboard?tab=dashboard">
                 <span className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium">
                   <BrainCircuit className="h-4 w-4" />
@@ -866,7 +888,7 @@ function MainAppPage() {
             </TabsTrigger>
             <TabsTrigger value="appointments" asChild>
               <Link href="/dashboard?tab=appointments">
-                <span className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium">
+                 <span className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium">
                   <CalendarDays className="h-4 w-4" />
                   Rendez-vous
                 </span>
@@ -874,7 +896,7 @@ function MainAppPage() {
             </TabsTrigger>
             <TabsTrigger value="new-medical-record" asChild>
               <Link href="/dashboard?tab=new-medical-record">
-                <span className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium">
+                 <span className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium">
                   <FileText className="h-4 w-4" />
                   Nouv. Dossier
                 </span>
@@ -918,6 +940,8 @@ export default function DashboardPage() {
     </Suspense>
   );
 }
+    
+
     
 
     
