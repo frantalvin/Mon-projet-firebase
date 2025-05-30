@@ -8,26 +8,27 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Added Select
-import { Calendar } from "@/components/ui/calendar"; // Added Calendar
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"; // Added Popover
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ResponsiveContainer, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Bar } from 'recharts';
 import { useState, useEffect, Suspense, useMemo } from "react";
 import type { EmergencyCaseAnalysis } from "@/ai/flows/emergency-flow";
 import { analyzeEmergencyCase } from "@/ai/flows/emergency-flow";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, BrainCircuit, Users, CalendarDays, LineChartIcon, ShieldCheck, PlusCircle, Eye, Search, FileText, CalendarIcon as LucideCalendarIcon, Loader2, AlertTriangle } from "lucide-react"; // Added Select, CalendarIcon, Loader2, AlertTriangle
+import { Terminal, BrainCircuit, Users, CalendarDays, LineChartIcon, ShieldCheck, PlusCircle, Eye, Search, FileText, CalendarIcon as LucideCalendarIcon, Loader2, AlertTriangle } from "lucide-react";
 import Link from 'next/link';
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, orderBy, Timestamp, doc, getDoc, addDoc, serverTimestamp } from "firebase/firestore";
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { zodResolver } from "@hookform/resolvers/zod"; // For new medical record form
-import { useForm } from "react-hook-form"; // For new medical record form
-import { z } from "zod"; // For new medical record form
-import { cn } from "@/lib/utils"; // For new medical record form
-import { toast } from "sonner"; // For new medical record form
-import { useRouter } from 'next/navigation'; // For new medical record form
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { z } from "zod";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { useRouter } from 'next/navigation';
 
 
 // Placeholder data for appointments chart
@@ -125,7 +126,6 @@ function DashboardTabContent() {
           </CardHeader>
           <CardContent className="flex flex-col space-y-2">
             <Button asChild><Link href="/patients/new"><PlusCircle className="mr-2 h-4 w-4" />Nouveau Patient</Link></Button>
-            {/* Link to new tab for new appointment/medical record */}
             <Button variant="outline" asChild><Link href="/dashboard?tab=new-medical-record"><PlusCircle className="mr-2 h-4 w-4" />Nouv. Dossier Médical</Link></Button>
           </CardContent>
         </Card>
@@ -349,7 +349,6 @@ function PatientsTabContent() {
                       <Button variant="outline" size="sm" asChild>
                         <Link href={patientDetailUrl}><Eye className="mr-2 h-4 w-4" />Voir Fiche</Link>
                       </Button>
-                       {/* "Nouv. Consultation" button removed from here, moved to its own tab */}
                     </div>
                   </li>
                 );
@@ -421,7 +420,6 @@ function AppointmentsTabContent() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-semibold">Gestion des Rendez-vous</h1>
-        {/* Button to navigate to new medical record tab */}
         <Button asChild>
           <Link href="/dashboard?tab=new-medical-record">
             <PlusCircle className="mr-2 h-4 w-4" />Nouv. Dossier Médical
@@ -497,7 +495,6 @@ function AppointmentsTabContent() {
   );
 }
 
-// --- New Tab for Creating Medical Record ---
 const medicalRecordFormSchema = z.object({
   consultationDate: z.date({
     required_error: "La date de consultation est requise.",
@@ -517,7 +514,7 @@ function NewMedicalRecordTabContent() {
   const [patientsForSelect, setPatientsForSelect] = useState<PatientData[]>([]);
   const [isLoadingPatients, setIsLoadingPatients] = useState(true);
   const [selectedPatientId, setSelectedPatientId] = useState<string | undefined>(undefined);
-  const [formKey, setFormKey] = useState(Date.now()); // To reset form on patient change
+  const [formKey, setFormKey] = useState(Date.now()); 
 
   useEffect(() => {
     const fetchPatientsForSelect = async () => {
@@ -554,7 +551,6 @@ function NewMedicalRecordTabContent() {
   });
 
   useEffect(() => {
-    // Reset form when selected patient changes
     form.reset({
         consultationDate: new Date(),
         motifConsultation: "",
@@ -563,7 +559,7 @@ function NewMedicalRecordTabContent() {
         traitementPrescrit: "",
         notesMedecin: "",
     });
-    setFormKey(Date.now()); // Force re-render of Form by changing key
+    setFormKey(Date.now()); 
   }, [selectedPatientId, form]);
 
 
@@ -583,7 +579,7 @@ function NewMedicalRecordTabContent() {
       const medicalRecordData = {
         ...data,
         patientId: selectedPatientId,
-        patientName: `${selectedPatient.firstName} ${selectedPatient.lastName}`, // Store patient name for easy display
+        patientName: `${selectedPatient.firstName} ${selectedPatient.lastName}`, 
         consultationDate: Timestamp.fromDate(data.consultationDate),
         createdAt: serverTimestamp(),
       };
@@ -594,9 +590,8 @@ function NewMedicalRecordTabContent() {
         description: `Nouveau dossier créé pour ${selectedPatient.firstName} ${selectedPatient.lastName} (ID: ${docRef.id})`,
       });
       form.reset();
-      setSelectedPatientId(undefined); // Reset patient selection
-      // Optionally navigate or update UI
-      router.push(`/patients/${selectedPatientId}`); // Navigate to patient details page
+      setSelectedPatientId(undefined); 
+      router.push(`/patients/${selectedPatientId}`); 
     } catch (error: any) {
       console.error("[NewMedicalRecordTabContent] Erreur lors de l'enregistrement du dossier médical :", error);
       toast.error("Erreur lors de l'enregistrement du dossier.", {
@@ -652,7 +647,7 @@ function NewMedicalRecordTabContent() {
           </div>
 
           {selectedPatientId && (
-            <Form {...form} key={formKey}> {/* Add key here */}
+            <Form {...form} key={formKey}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                 <FormField
                   control={form.control}
@@ -843,7 +838,7 @@ function MainAppPage() {
     dashboard: <DashboardTabContent />,
     patients: <PatientsTabContent />,
     appointments: <AppointmentsTabContent />,
-    'new-medical-record': <NewMedicalRecordTabContent />, // New tab content
+    'new-medical-record': <NewMedicalRecordTabContent />,
     statistics: <StatisticsTabContent />,
     admin: <AdminTabContent />,
   };
@@ -854,33 +849,51 @@ function MainAppPage() {
         <div className="overflow-x-auto sticky top-0 bg-background z-10 shadow-sm border-b mb-4">
           <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-max">
             <TabsTrigger value="dashboard" asChild>
-              <Link href="/dashboard?tab=dashboard" className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm gap-2">
-                <BrainCircuit className="h-4 w-4" />Tableau de Bord
+              <Link href="/dashboard?tab=dashboard">
+                <span className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium">
+                  <BrainCircuit className="h-4 w-4" />
+                  Tableau de Bord
+                </span>
               </Link>
             </TabsTrigger>
             <TabsTrigger value="patients" asChild>
-              <Link href="/dashboard?tab=patients" className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm gap-2">
-                <Users className="h-4 w-4" />Patients
+              <Link href="/dashboard?tab=patients">
+                <span className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium">
+                  <Users className="h-4 w-4" />
+                  Patients
+                </span>
               </Link>
             </TabsTrigger>
             <TabsTrigger value="appointments" asChild>
-              <Link href="/dashboard?tab=appointments" className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm gap-2">
-                <CalendarDays className="h-4 w-4" />Rendez-vous
+              <Link href="/dashboard?tab=appointments">
+                <span className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium">
+                  <CalendarDays className="h-4 w-4" />
+                  Rendez-vous
+                </span>
               </Link>
             </TabsTrigger>
-            <TabsTrigger value="new-medical-record" asChild> {/* New tab trigger */}
-              <Link href="/dashboard?tab=new-medical-record" className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm gap-2">
-                <FileText className="h-4 w-4" />Nouv. Dossier
+            <TabsTrigger value="new-medical-record" asChild>
+              <Link href="/dashboard?tab=new-medical-record">
+                <span className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium">
+                  <FileText className="h-4 w-4" />
+                  Nouv. Dossier
+                </span>
               </Link>
             </TabsTrigger>
             <TabsTrigger value="statistics" asChild>
-              <Link href="/dashboard?tab=statistics" className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm gap-2">
-                <LineChartIcon className="h-4 w-4" />Statistiques
+              <Link href="/dashboard?tab=statistics">
+                <span className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium">
+                  <LineChartIcon className="h-4 w-4" />
+                  Statistiques
+                </span>
               </Link>
             </TabsTrigger>
             <TabsTrigger value="admin" asChild>
-              <Link href="/dashboard?tab=admin" className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm gap-2">
-                <ShieldCheck className="h-4 w-4" />Admin
+              <Link href="/dashboard?tab=admin">
+                <span className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium">
+                  <ShieldCheck className="h-4 w-4" />
+                  Admin
+                </span>
               </Link>
             </TabsTrigger>
           </TabsList>
@@ -905,5 +918,6 @@ export default function DashboardPage() {
     </Suspense>
   );
 }
+    
 
     
