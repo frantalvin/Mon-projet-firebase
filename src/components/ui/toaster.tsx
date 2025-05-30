@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -10,7 +9,7 @@ type ToasterProps = React.ComponentProps<typeof Sonner>
 const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
-      theme={'light' as ToasterProps["theme"]} // Forcé à "light" pour correspondre au forcedTheme
+      // theme={'light' as ToasterProps["theme"]} // Thème forcé retiré
       className="toaster group"
       toastOptions={{
         classNames: {
