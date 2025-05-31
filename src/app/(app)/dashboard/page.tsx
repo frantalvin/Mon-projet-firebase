@@ -11,8 +11,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { ResponsiveContainer, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Bar } from 'recharts';
-import { useState, useEffect, Suspense, useMemo } from "react";
+import { useState, useEffect, Suspense, useMemo, useCallback } from "react";
 import type { EmergencyCaseAnalysis } from "@/ai/flows/emergency-flow";
 import { analyzeEmergencyCase } from "@/ai/flows/emergency-flow";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -217,7 +218,6 @@ interface PatientData {
   createdAt?: Timestamp; 
 }
 
-// Temporarily simplified PatientsTabContent for debugging
 function PatientsTabContent() {
   console.log("[PatientsTabContent] Rendering simplified placeholder.");
   return (
@@ -255,61 +255,306 @@ interface AppointmentData {
   reason?: string;
 }
 
+const appointmentFormSchema = z.object({
+  patientId: z.string({ required_error: "Veuillez sélectionner un patient." }),
+  doctorName: z.string().min(2, { message: "Le nom du médecin doit contenir au moins 2 caractères." }),
+  appointmentDate: z.date({ required_error: "La date du rendez-vous est requise." }),
+  appointmentHour: z.string().regex(/^([01]\d|2[0-3])$/, { message: "Heure invalide (00-23)." }),
+  appointmentMinute: z.string().regex(/^[0-5]\d$/, { message: "Minute invalide (00-59)." }),
+  reason: z.string().min(5, { message: "Le motif doit contenir au moins 5 caractères." }).optional().or(z.literal('')),
+});
+type AppointmentFormValues = z.infer<typeof appointmentFormSchema>;
+
+
 function AppointmentsTabContent() {
   const [appointmentsList, setAppointmentsList] = useState<AppointmentData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  
+  const [isAddAppointmentDialogOpen, setIsAddAppointmentDialogOpen] = useState(false);
+  const [patientsForSelect, setPatientsForSelect] = useState<PatientData[]>([]);
+  const [isLoadingPatientsForSelect, setIsLoadingPatientsForSelect] = useState(true);
+  const [isSubmittingAppointment, setIsSubmittingAppointment] = useState(false);
+
+  const appointmentForm = useForm<AppointmentFormValues>({
+    resolver: zodResolver(appointmentFormSchema),
+    defaultValues: {
+      patientId: undefined,
+      doctorName: "",
+      appointmentDate: new Date(),
+      appointmentHour: "09",
+      appointmentMinute: "00",
+      reason: "",
+    },
+  });
+
+  const fetchAppointments = useCallback(async () => {
+    setIsLoading(true);
+    setFetchError(null);
+    console.log("[AppointmentsTabContent] Démarrage de la récupération des rendez-vous.");
+    try {
+      const appointmentsCollectionRef = collection(db, "appointments");
+      const q = query(appointmentsCollectionRef, orderBy("dateTime", "desc"));
+      const querySnapshot = await getDocs(q);
+      console.log(`[AppointmentsTabContent] Snapshot des rendez-vous reçu. Nombre de documents: ${querySnapshot.size}`);
+      
+      const fetchedAppointments: AppointmentData[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        fetchedAppointments.push({
+          id: doc.id,
+          patientName: data.patientName || "N/A",
+          doctorName: data.doctorName || "N/A",
+          dateTime: data.dateTime,
+          status: data.status || "Inconnu",
+          reason: data.reason
+        } as AppointmentData);
+      });
+      setAppointmentsList(fetchedAppointments);
+      console.log("[AppointmentsTabContent] Rendez-vous récupérés et formatés:", fetchedAppointments);
+    } catch (error: any) {
+      console.error("[AppointmentsTabContent] Erreur lors de la récupération des rendez-vous :", error);
+      let errorMessage = `Impossible de charger la liste des rendez-vous. ${error.message || "Erreur inconnue."}`;
+      if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes("permission"))) {
+          errorMessage += " Veuillez vérifier vos règles de sécurité Firestore pour la collection 'appointments'.";
+      }
+      setFetchError(errorMessage);
+    } finally {
+      setIsLoading(false);
+       console.log("[AppointmentsTabContent] Fin de la récupération des rendez-vous.");
+    }
+  }, []); // useCallback dependencies
 
   useEffect(() => {
-    const fetchAppointments = async () => {
-      setIsLoading(true);
-      setFetchError(null);
-      console.log("[AppointmentsTabContent] Démarrage de la récupération des rendez-vous.");
+    fetchAppointments();
+  }, [fetchAppointments]);
+
+  useEffect(() => {
+    const fetchPatientsForSelect = async () => {
+      if (!isAddAppointmentDialogOpen) return; // Only fetch if dialog is open or about to open
+      setIsLoadingPatientsForSelect(true);
       try {
-        const appointmentsCollectionRef = collection(db, "appointments");
-        const q = query(appointmentsCollectionRef, orderBy("dateTime", "desc")); 
+        const patientsCollectionRef = collection(db, "patients");
+        const q = query(patientsCollectionRef, orderBy("lastName", "asc"));
         const querySnapshot = await getDocs(q);
-        console.log(`[AppointmentsTabContent] Snapshot des rendez-vous reçu. Nombre de documents: ${querySnapshot.size}`);
-        
-        const fetchedAppointments: AppointmentData[] = [];
+        const fetchedPatients: PatientData[] = [];
         querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          fetchedAppointments.push({
-            id: doc.id,
-            patientName: data.patientName || "N/A",
-            doctorName: data.doctorName || "N/A",
-            dateTime: data.dateTime,
-            status: data.status || "Inconnu",
-            reason: data.reason
-          } as AppointmentData);
+          fetchedPatients.push({ id: doc.id, ...doc.data() } as PatientData);
         });
-        setAppointmentsList(fetchedAppointments);
-        console.log("[AppointmentsTabContent] Rendez-vous récupérés et formatés:", fetchedAppointments);
+        setPatientsForSelect(fetchedPatients);
       } catch (error: any) {
-        console.error("[AppointmentsTabContent] Erreur lors de la récupération des rendez-vous :", error);
-        let errorMessage = `Impossible de charger la liste des rendez-vous. ${error.message || "Erreur inconnue."}`;
-        if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes("permission"))) {
-            errorMessage += " Veuillez vérifier vos règles de sécurité Firestore pour la collection 'appointments'.";
-        }
-        setFetchError(errorMessage);
+        console.error("Error fetching patients for select:", error);
+        toast.error("Erreur lors du chargement de la liste des patients pour le formulaire.");
       } finally {
-        setIsLoading(false);
-         console.log("[AppointmentsTabContent] Fin de la récupération des rendez-vous.");
+        setIsLoadingPatientsForSelect(false);
       }
     };
+    fetchPatientsForSelect();
+  }, [isAddAppointmentDialogOpen]);
 
-    fetchAppointments();
-  }, []);
+  async function onSubmitNewAppointment(data: AppointmentFormValues) {
+    setIsSubmittingAppointment(true);
+    const selectedPatient = patientsForSelect.find(p => p.id === data.patientId);
+    if (!selectedPatient) {
+      toast.error("Patient sélectionné introuvable.");
+      setIsSubmittingAppointment(false);
+      return;
+    }
+
+    try {
+      const appointmentDateTime = new Date(data.appointmentDate);
+      appointmentDateTime.setHours(parseInt(data.appointmentHour, 10));
+      appointmentDateTime.setMinutes(parseInt(data.appointmentMinute, 10));
+      appointmentDateTime.setSeconds(0);
+      appointmentDateTime.setMilliseconds(0);
+
+      const newAppointment = {
+        patientId: data.patientId,
+        patientName: `${selectedPatient.firstName} ${selectedPatient.lastName}`,
+        doctorName: data.doctorName,
+        dateTime: Timestamp.fromDate(appointmentDateTime),
+        reason: data.reason || "",
+        status: "Prévu", // Default status
+        createdAt: serverTimestamp(),
+      };
+
+      await addDoc(collection(db, "appointments"), newAppointment);
+      toast.success("Rendez-vous planifié avec succès !");
+      appointmentForm.reset();
+      setIsAddAppointmentDialogOpen(false);
+      fetchAppointments(); // Refresh the list
+    } catch (error: any) {
+      console.error("Erreur lors de la planification du rendez-vous :", error);
+      toast.error("Erreur lors de la planification du rendez-vous.", {
+        description: error instanceof Error ? error.message : "Une erreur inconnue est survenue."
+      });
+    } finally {
+      setIsSubmittingAppointment(false);
+    }
+  }
+
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-semibold">Gestion des Rendez-vous</h1>
-        <Button asChild>
-          <Link href="/dashboard?tab=new-medical-record"> 
-            <PlusCircle className="mr-2 h-4 w-4" />Nouv. Dossier Médical
-          </Link>
-        </Button>
+        <Dialog open={isAddAppointmentDialogOpen} onOpenChange={setIsAddAppointmentDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={() => setIsAddAppointmentDialogOpen(true)}>
+              <PlusCircle className="mr-2 h-4 w-4" />Planifier un Rendez-vous
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Planifier un Nouveau Rendez-vous</DialogTitle>
+              <DialogDescription>
+                Remplissez les informations ci-dessous pour créer un nouveau rendez-vous.
+              </DialogDescription>
+            </DialogHeader>
+            <Form {...appointmentForm}>
+              <form onSubmit={appointmentForm.handleSubmit(onSubmitNewAppointment)} className="space-y-4 py-4">
+                <FormField
+                  control={appointmentForm.control}
+                  name="patientId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Patient</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingPatientsForSelect}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={isLoadingPatientsForSelect ? "Chargement..." : "Sélectionner un patient"} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {isLoadingPatientsForSelect ? (
+                            <SelectItem value="loading" disabled>Chargement des patients...</SelectItem>
+                          ) : patientsForSelect.length === 0 ? (
+                             <SelectItem value="no-patients" disabled>Aucun patient. Enregistrez-en un.</SelectItem>
+                          ) : (
+                            patientsForSelect.map(patient => (
+                              <SelectItem key={patient.id} value={patient.id}>
+                                {patient.lastName}, {patient.firstName} (Né le: {patient.dob ? format(new Date(patient.dob), 'dd/MM/yyyy', { locale: fr }) : 'N/A'})
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={appointmentForm.control}
+                  name="doctorName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nom du Médecin</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Dr. Dupont" {...field} disabled={isSubmittingAppointment} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={appointmentForm.control}
+                  name="appointmentDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Date du Rendez-vous</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                              disabled={isSubmittingAppointment}
+                            >
+                              {field.value ? (
+                                format(field.value, "PPP", { locale: fr })
+                              ) : (
+                                <span>Choisir une date</span>
+                              )}
+                              <LucideCalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) => date < new Date(new Date().setHours(0,0,0,0)) || isSubmittingAppointment} // Prevent past dates
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                        control={appointmentForm.control}
+                        name="appointmentHour"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Heure (HH)</FormLabel>
+                                <FormControl>
+                                    <Input type="number" placeholder="09" {...field} disabled={isSubmittingAppointment} min="0" max="23" />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={appointmentForm.control}
+                        name="appointmentMinute"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Minute (MM)</FormLabel>
+                                <FormControl>
+                                    <Input type="number" placeholder="30" {...field} disabled={isSubmittingAppointment} min="0" max="59" />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
+
+
+                <FormField
+                  control={appointmentForm.control}
+                  name="reason"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Motif de la consultation (Optionnel)</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Ex: Consultation de suivi, symptômes grippaux..." {...field} disabled={isSubmittingAppointment} rows={3} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <DialogFooter>
+                  <DialogClose asChild>
+                     <Button type="button" variant="outline" disabled={isSubmittingAppointment}>Annuler</Button>
+                  </DialogClose>
+                  <Button type="submit" disabled={isSubmittingAppointment}>
+                    {isSubmittingAppointment && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isSubmittingAppointment ? "Planification..." : "Planifier"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </div>
       <Card>
         <CardHeader>
@@ -317,7 +562,7 @@ function AppointmentsTabContent() {
           <CardDescription>Visualisez et gérez les rendez-vous planifiés.</CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading && <p className="text-center py-8 text-muted-foreground">Chargement des rendez-vous...</p>}
+          {isLoading && <p className="text-center py-8 text-muted-foreground flex items-center justify-center"><Loader2 className="mr-2 h-5 w-5 animate-spin" />Chargement des rendez-vous...</p>}
 
           {!isLoading && fetchError && (
             <Alert variant="destructive" className="mt-4">
@@ -783,7 +1028,7 @@ function MainAppPage() {
 
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<div className="flex justify-center items-center h-full"><p>Chargement de l'application...</p></div>}>
+    <Suspense fallback={<div className="flex justify-center items-center h-full"><Loader2 className="mr-2 h-8 w-8 animate-spin" />Chargement de l'application...</div>}>
       <MainAppPage />
     </Suspense>
   );
