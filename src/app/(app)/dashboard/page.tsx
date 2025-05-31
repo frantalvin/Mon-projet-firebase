@@ -1336,34 +1336,115 @@ function StaffTabContent() {
   );
 }
 
+interface DiseaseData {
+  name: string;
+  count: number;
+}
 
 function StatisticsTabContent() {
-  const diseaseData = [
-    { name: 'Grippe', count: 120 }, { name: 'Rhume', count: 90 },
-    { name: 'Gastro', count: 75 }, { name: 'Angine', count: 60 },
-    { name: 'Autre', count: 150 },
-  ];
+  const [diseaseData, setDiseaseData] = useState<DiseaseData[]>([]);
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [fetchErrorStats, setFetchErrorStats] = useState<string | null>(null);
+
+  const fetchDiseaseStats = useCallback(async () => {
+    setIsLoadingStats(true);
+    setFetchErrorStats(null);
+    try {
+      const medicalRecordsRef = collection(db, "dossiersMedicaux");
+      const querySnapshot = await getDocs(medicalRecordsRef);
+      
+      const counts: { [key: string]: number } = {};
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        const diagnostic = data.diagnostic?.trim();
+        if (diagnostic && diagnostic !== "") {
+          counts[diagnostic] = (counts[diagnostic] || 0) + 1;
+        } else {
+          // Optionally count "Non spécifié" or handle as needed
+          // counts["Non spécifié"] = (counts["Non spécifié"] || 0) + 1;
+        }
+      });
+
+      const chartData = Object.entries(counts)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count); // Sort by count descending
+      
+      setDiseaseData(chartData);
+
+    } catch (error: any) {
+      console.error("Erreur lors de la récupération des statistiques des maladies :", error);
+      let errorMessage = `Impossible de charger les statistiques. ${error.message || "Erreur inconnue."}`;
+      if (error.code === 'permission-denied') {
+          errorMessage += " Veuillez vérifier vos règles de sécurité Firestore pour la collection 'dossiersMedicaux'.";
+      }
+      setFetchErrorStats(errorMessage);
+    } finally {
+      setIsLoadingStats(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDiseaseStats();
+  }, [fetchDiseaseStats]);
+
   return (
     <div className="space-y-6">
        <h1 className="text-3xl font-semibold">Statistiques et Visualisations</h1>
       <Card>
         <CardHeader>
           <CardTitle>Maladies les plus fréquentes</CardTitle>
-          <CardDescription>Distribution des maladies diagnostiquées (données exemples).</CardDescription>
+          <CardDescription>Distribution des maladies diagnostiquées dans les dossiers médicaux.</CardDescription>
         </CardHeader>
         <CardContent className="h-[400px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={diseaseData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="count" fill="hsl(var(--primary))" name="Nombre de cas" />
-            </BarChart>
-          </ResponsiveContainer>
+          {isLoadingStats && (
+            <div className="flex justify-center items-center h-full">
+              <Loader2 className="mr-2 h-8 w-8 animate-spin text-primary" />
+              <p>Chargement des statistiques...</p>
+            </div>
+          )}
+          {!isLoadingStats && fetchErrorStats && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Erreur de chargement</AlertTitle>
+              <AlertDescription>{fetchErrorStats}</AlertDescription>
+            </Alert>
+          )}
+          {!isLoadingStats && !fetchErrorStats && diseaseData.length === 0 && (
+            <p className="text-muted-foreground text-center py-8">
+              Aucune donnée de diagnostic trouvée pour générer les statistiques.
+            </p>
+          )}
+          {!isLoadingStats && !fetchErrorStats && diseaseData.length > 0 && (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={diseaseData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis allowDecimals={false} />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="count" fill="hsl(var(--primary))" name="Nombre de cas" />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
+      {/* Placeholder for other statistics */}
+      <Card>
+          <CardHeader>
+            <CardTitle>Autres Statistiques (Exemples)</CardTitle>
+            <CardDescription>D'autres visualisations pourront être ajoutées ici.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">
+              Exemples de statistiques à venir :
+            </p>
+            <ul className="list-disc list-inside text-muted-foreground text-sm space-y-1 mt-2">
+                <li>Cas de guérison vs. Cas de décès (nécessite d'ajouter un champ "résultat" aux dossiers)</li>
+                <li>Répartition des patients par tranche d'âge</li>
+                <li>Statistiques sur les types de rendez-vous (nouveaux, suivi, urgence)</li>
+            </ul>
+          </CardContent>
+        </Card>
     </div>
   );
 }
