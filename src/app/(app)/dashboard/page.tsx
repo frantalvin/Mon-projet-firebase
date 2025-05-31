@@ -17,7 +17,7 @@ import { useState, useEffect, Suspense, useMemo, useCallback } from "react";
 import type { EmergencyCaseAnalysis } from "@/ai/flows/emergency-flow";
 import { analyzeEmergencyCase } from "@/ai/flows/emergency-flow";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, BrainCircuit, Users, CalendarDays, LineChartIcon, ShieldCheck, PlusCircle, Eye, Search, FileText, CalendarIcon as LucideCalendarIcon, Loader2, AlertTriangle } from "lucide-react";
+import { Terminal, BrainCircuit, Users, CalendarDays, LineChartIcon, ShieldCheck, PlusCircle, Eye, Search, FileText, CalendarIcon as LucideCalendarIcon, Loader2, AlertTriangle, Users2 } from "lucide-react";
 import Link from 'next/link';
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, orderBy, Timestamp, doc, getDoc, addDoc, serverTimestamp } from "firebase/firestore";
@@ -251,7 +251,7 @@ interface AppointmentData {
   patientName: string; 
   doctorName: string; 
   dateTime: Timestamp; 
-  status: 'Prévu' | 'Terminé' | 'Annulé' | 'Absent' | string; // Ajout du statut 'Absent'
+  status: 'Prévu' | 'Terminé' | 'Annulé' | 'Absent' | string; 
   reason?: string;
 }
 
@@ -930,6 +930,268 @@ function NewMedicalRecordTabContent() {
   );
 }
 
+interface StaffData {
+  id: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  specialty?: string;
+  email?: string;
+  phone?: string;
+  createdAt?: Timestamp;
+}
+
+const staffFormSchema = z.object({
+  firstName: z.string().min(2, { message: "Le prénom doit contenir au moins 2 caractères." }),
+  lastName: z.string().min(2, { message: "Le nom de famille doit contenir au moins 2 caractères." }),
+  role: z.string().min(3, { message: "Le rôle doit contenir au moins 3 caractères (ex: Médecin, Infirmier)." }),
+  specialty: z.string().optional().or(z.literal('')),
+  email: z.string().email({ message: "Adresse e-mail invalide." }).optional().or(z.literal('')),
+  phone: z.string().regex(/^\+?[0-9\s-()]{7,20}$/, { message: "Numéro de téléphone invalide."}).optional().or(z.literal('')),
+});
+type StaffFormValues = z.infer<typeof staffFormSchema>;
+
+function StaffTabContent() {
+  const [staffList, setStaffList] = useState<StaffData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [isAddStaffDialogOpen, setIsAddStaffDialogOpen] = useState(false);
+  const [isSubmittingStaff, setIsSubmittingStaff] = useState(false);
+
+  const staffForm = useForm<StaffFormValues>({
+    resolver: zodResolver(staffFormSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      role: "",
+      specialty: "",
+      email: "",
+      phone: "",
+    },
+  });
+
+  const fetchStaff = useCallback(async () => {
+    setIsLoading(true);
+    setFetchError(null);
+    try {
+      const staffCollectionRef = collection(db, "staff");
+      const q = query(staffCollectionRef, orderBy("lastName", "asc"));
+      const querySnapshot = await getDocs(q);
+      const fetchedStaff: StaffData[] = [];
+      querySnapshot.forEach((doc) => {
+        fetchedStaff.push({ id: doc.id, ...doc.data() } as StaffData);
+      });
+      setStaffList(fetchedStaff);
+    } catch (error: any) {
+      console.error("Erreur lors de la récupération du personnel :", error);
+      let errorMessage = `Impossible de charger la liste du personnel. ${error.message || "Erreur inconnue."}`;
+      if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes("permission"))) {
+          errorMessage += " Veuillez vérifier vos règles de sécurité Firestore pour la collection 'staff'.";
+      }  else if (error.message && error.message.toLowerCase().includes("index")) {
+        errorMessage += " Un index Firestore est requis. Veuillez vérifier la console Firebase pour créer l'index suggéré pour la collection 'staff' (tri par lastName asc).";
+      }
+      setFetchError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStaff();
+  }, [fetchStaff]);
+
+  async function onSubmitNewStaff(data: StaffFormValues) {
+    setIsSubmittingStaff(true);
+    try {
+      const newStaffMember = {
+        ...data,
+        createdAt: serverTimestamp(),
+      };
+      await addDoc(collection(db, "staff"), newStaffMember);
+      toast.success("Membre du personnel ajouté avec succès !");
+      staffForm.reset();
+      setIsAddStaffDialogOpen(false);
+      fetchStaff();
+    } catch (error: any) {
+      console.error("Erreur lors de l'ajout du membre du personnel :", error);
+      toast.error("Erreur lors de l'ajout du membre du personnel.", {
+        description: error instanceof Error ? error.message : "Une erreur inconnue est survenue."
+      });
+    } finally {
+      setIsSubmittingStaff(false);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-semibold">Gestion du Personnel Soignant</h1>
+        <Dialog open={isAddStaffDialogOpen} onOpenChange={setIsAddStaffDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={() => setIsAddStaffDialogOpen(true)}>
+              <PlusCircle className="mr-2 h-4 w-4" />Ajouter un Membre
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Ajouter un Nouveau Membre du Personnel</DialogTitle>
+              <DialogDescription>
+                Remplissez les informations ci-dessous.
+              </DialogDescription>
+            </DialogHeader>
+            <Form {...staffForm}>
+              <form onSubmit={staffForm.handleSubmit(onSubmitNewStaff)} className="space-y-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={staffForm.control}
+                    name="firstName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Prénom</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Alice" {...field} disabled={isSubmittingStaff} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={staffForm.control}
+                    name="lastName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nom</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Martin" {...field} disabled={isSubmittingStaff} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={staffForm.control}
+                  name="role"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Rôle</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: Médecin, Infirmier(ère), Secrétaire" {...field} disabled={isSubmittingStaff} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={staffForm.control}
+                  name="specialty"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Spécialité (si applicable)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: Cardiologie, Pédiatrie" {...field} disabled={isSubmittingStaff} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={staffForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email (Optionnel)</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="alice.martin@example.com" {...field} disabled={isSubmittingStaff} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={staffForm.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Téléphone (Optionnel)</FormLabel>
+                      <FormControl>
+                        <Input type="tel" placeholder="+33 1 23 45 67 89" {...field} disabled={isSubmittingStaff} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button type="button" variant="outline" disabled={isSubmittingStaff}>Annuler</Button>
+                  </DialogClose>
+                  <Button type="submit" disabled={isSubmittingStaff}>
+                    {isSubmittingStaff && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isSubmittingStaff ? "Ajout en cours..." : "Ajouter le Membre"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Liste du Personnel</CardTitle>
+          <CardDescription>Membres du personnel enregistrés.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading && <p className="text-center py-8 text-muted-foreground flex items-center justify-center"><Loader2 className="mr-2 h-5 w-5 animate-spin" />Chargement du personnel...</p>}
+          {!isLoading && fetchError && (
+            <Alert variant="destructive" className="mt-4">
+              <Terminal className="h-4 w-4" />
+              <AlertTitle>Erreur de Chargement</AlertTitle>
+              <AlertDescription>{fetchError}</AlertDescription>
+            </Alert>
+          )}
+          {!isLoading && !fetchError && staffList.length === 0 && (
+            <p className="text-muted-foreground text-center py-8">
+              Aucun membre du personnel enregistré pour le moment.
+            </p>
+          )}
+          {!isLoading && !fetchError && staffList.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="text-xs text-muted-foreground uppercase bg-muted/50">
+                  <tr>
+                    <th scope="col" className="px-6 py-3">Nom</th>
+                    <th scope="col" className="px-6 py-3">Rôle</th>
+                    <th scope="col" className="px-6 py-3">Spécialité</th>
+                    <th scope="col" className="px-6 py-3">Email</th>
+                    <th scope="col" className="px-6 py-3">Téléphone</th>
+                    <th scope="col" className="px-6 py-3">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {staffList.map((staff) => (
+                    <tr key={staff.id} className="border-b hover:bg-muted/30">
+                      <td className="px-6 py-4 font-medium">{staff.lastName}, {staff.firstName}</td>
+                      <td className="px-6 py-4">{staff.role}</td>
+                      <td className="px-6 py-4">{staff.specialty || "N/A"}</td>
+                      <td className="px-6 py-4">{staff.email || "N/A"}</td>
+                      <td className="px-6 py-4">{staff.phone || "N/A"}</td>
+                      <td className="px-6 py-4">
+                        <Button variant="outline" size="sm" onClick={() => toast.info("Fonctionnalité de détails à implémenter.")}>
+                          <Eye className="mr-2 h-4 w-4" />Détails
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 
 function StatisticsTabContent() {
   const diseaseData = [
@@ -995,6 +1257,7 @@ function MainAppPage() {
     { value: 'patients', label: 'Patients', icon: Users, content: <PatientsTabContent /> },
     { value: 'appointments', label: 'Rendez-vous', icon: CalendarDays, content: <AppointmentsTabContent /> },
     { value: 'new-medical-record', label: 'Nouv. Dossier', icon: FileText, content: <NewMedicalRecordTabContent /> },
+    { value: 'staff', label: 'Personnel', icon: Users2, content: <StaffTabContent /> },
     { value: 'statistics', label: 'Statistiques', icon: LineChartIcon, content: <StatisticsTabContent /> },
     { value: 'admin', label: 'Admin', icon: ShieldCheck, content: <AdminTabContent /> },
   ];
@@ -1037,4 +1300,3 @@ export default function DashboardPage() {
   );
 }
     
-

@@ -25,7 +25,7 @@ import {
   SidebarNavMain,
   SidebarNavLink,
 } from '@/components/ui/sidebar';
-import { LayoutDashboard, UsersRound, CalendarDays, Menu, LineChart, ShieldCheck, FileText, PlusCircle } from 'lucide-react'; // Added FileText, PlusCircle
+import { LayoutDashboard, UsersRound, CalendarDays, Menu, LineChart, ShieldCheck, FileText, PlusCircle, Users2 } from 'lucide-react'; // Added Users2
 
 interface NavItem {
   query: string;
@@ -43,7 +43,8 @@ export function Navigation() {
     { query: 'dashboard', label: 'Tableau de Bord', icon: LayoutDashboard },
     { query: 'patients', label: 'Patients', icon: UsersRound },
     { query: 'appointments', label: 'Rendez-vous', icon: CalendarDays },
-    { query: 'new-medical-record', label: 'Nouv. Dossier', icon: PlusCircle }, // New Nav Item
+    { query: 'new-medical-record', label: 'Nouv. Dossier', icon: PlusCircle },
+    { query: 'staff', label: 'Personnel', icon: Users2 },
     // { query: 'statistics', label: 'Statistiques', icon: LineChart }, 
     // { query: 'admin', label: 'Admin', icon: ShieldCheck },
   ];
