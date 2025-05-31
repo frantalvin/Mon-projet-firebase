@@ -18,7 +18,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  reactStrictMode: true, // Explicitly set
+  reactStrictMode: true, // Ensures React Strict Mode is enabled
 };
 
 export default nextConfig;

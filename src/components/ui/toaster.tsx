@@ -9,7 +9,8 @@ type ToasterProps = React.ComponentProps<typeof Sonner>
 const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
-      // theme={'light' as ToasterProps["theme"]} // Thème forcé retiré
+      // No hardcoded theme prop here, Sonner will adapt to the html[class="dark"]
+      // or default to system theme if class is not present.
       className="toaster group"
       toastOptions={{
         classNames: {

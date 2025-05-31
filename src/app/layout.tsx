@@ -3,7 +3,7 @@ import { Inter as FontSans } from 'next/font/google';
 import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/theme-provider';
 import { AppProvider } from '@/contexts/app-context';
-import { Toaster } from '@/components/ui/toaster';
+import { Toaster } from '@/components/ui/toaster'; // Sonner toaster
 import './globals.css';
 
 const fontSans = FontSans({
@@ -31,9 +31,9 @@ export default function RootLayout({
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="light"
-          enableSystem={true} // Changé de false à true
-          disableTransitionOnChange
+          defaultTheme="light" // Default to light if system theme can't be determined or on first load
+          enableSystem={true} // Allow system theme preference to take precedence
+          disableTransitionOnChange // Prevents theme flash on route changes
         >
           <AppProvider>
             {children}

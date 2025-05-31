@@ -1,4 +1,3 @@
-
 // src/lib/firebase.ts
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
@@ -12,7 +11,7 @@ const firebaseConfig = {
   storageBucket: "mon-atta.firebasestorage.app",
   messagingSenderId: "912302999620", // Mis à jour avec la valeur fournie
   appId: "1:912302999620:android:64cd0f3add2858b3dd9411", // Basé sur mobilesdk_app_id fourni. Pour une application web, un App ID Web dédié est généralement utilisé.
-  measurementId: "YOUR_MEASUREMENT_ID" // Optionnel, pour Google Analytics. Vérifiez dans votre console Firebase si nécessaire.
+  measurementId: "YOUR_MEASUREMENT_ID" // Optionnel, pour Google Analytics. Vérifiez et mettez à jour cette valeur depuis votre console Firebase si vous utilisez Analytics.
 };
 
 let app: FirebaseApp;
@@ -29,4 +28,3 @@ auth = getAuth(app);
 db = getFirestore(app);
 
 export { app, auth, db };
-
