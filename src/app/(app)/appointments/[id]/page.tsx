@@ -20,7 +20,7 @@ interface AppointmentDetailsData {
   doctorName: string;
   dateTime: Timestamp;
   reason?: string;
-  status: 'Prévu' | 'Terminé' | 'Annulé' | 'Absent' | string; // Ajout du statut 'Absent'
+  status: 'Prévu' | 'Terminé' | 'Annulé' | 'Absent' | string; 
   createdAt?: Timestamp;
 }
 
@@ -128,7 +128,7 @@ export default function AppointmentDetailPage({ params: paramsProp }: { params: 
     if (status === 'Terminé') return <CheckCircle2 className="h-5 w-5 text-green-500 mr-2" />;
     if (status === 'Annulé') return <XCircle className="h-5 w-5 text-red-500 mr-2" />;
     if (status === 'Prévu') return <CalendarClock className="h-5 w-5 text-blue-500 mr-2" />;
-    if (status === 'Absent') return <UserX className="h-5 w-5 text-orange-500 mr-2" />; // Nouvelle icône pour 'Absent'
+    if (status === 'Absent') return <UserX className="h-5 w-5 text-orange-500 mr-2" />; 
     return <AlertCircle className="h-5 w-5 text-yellow-500 mr-2" />;
   };
   
@@ -136,7 +136,7 @@ export default function AppointmentDetailPage({ params: paramsProp }: { params: 
     if (status === 'Terminé') return 'text-green-700 bg-green-100 dark:text-green-300 dark:bg-green-700/30';
     if (status === 'Annulé') return 'text-red-700 bg-red-100 dark:text-red-300 dark:bg-red-700/30';
     if (status === 'Prévu') return 'text-blue-700 bg-blue-100 dark:text-blue-300 dark:bg-blue-700/30';
-    if (status === 'Absent') return 'text-orange-700 bg-orange-100 dark:text-orange-300 dark:bg-orange-700/30'; // Nouvelle classe pour 'Absent'
+    if (status === 'Absent') return 'text-orange-700 bg-orange-100 dark:text-orange-300 dark:bg-orange-700/30'; 
     return 'text-yellow-700 bg-yellow-100 dark:text-yellow-300 dark:bg-yellow-700/30';
   };
 
@@ -212,10 +212,7 @@ export default function AppointmentDetailPage({ params: paramsProp }: { params: 
                   {isUpdatingStatus ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserX className="mr-2 h-4 w-4" />}
                   Marquer comme Absent
                 </Button>
-              </>
-            )}
-            {appointment.status !== 'Annulé' && appointment.status !== 'Terminé' && (
-                 <Button 
+                <Button 
                     onClick={() => handleUpdateStatus('Annulé')} 
                     disabled={isUpdatingStatus}
                     variant="destructive"
@@ -224,7 +221,9 @@ export default function AppointmentDetailPage({ params: paramsProp }: { params: 
                    {isUpdatingStatus ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <XCircle className="mr-2 h-4 w-4" />}
                    Annuler le RDV
                  </Button>
+              </>
             )}
+            
             { (appointment.status === 'Annulé' || appointment.status === 'Terminé' || appointment.status === 'Absent') && (
                 <p className="text-sm text-muted-foreground">Le statut de ce rendez-vous ne peut plus être modifié.</p>
             )}
