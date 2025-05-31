@@ -21,7 +21,7 @@ import { Terminal, BrainCircuit, Users, CalendarDays, LineChartIcon, ShieldCheck
 import Link from 'next/link';
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, orderBy, Timestamp, doc, getDoc, addDoc, serverTimestamp, where } from "firebase/firestore";
-import { format, startOfDay, endOfDay, isSameDay } from 'date-fns';
+import { format, startOfDay, endOfDay, isSameDay, differenceInYears } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -1341,14 +1341,45 @@ interface DiseaseData {
   count: number;
 }
 
+interface AgeGroupStat {
+  ageGroup: string;
+  count: number;
+}
+
 function StatisticsTabContent() {
   const [diseaseData, setDiseaseData] = useState<DiseaseData[]>([]);
-  const [isLoadingStats, setIsLoadingStats] = useState(true);
-  const [fetchErrorStats, setFetchErrorStats] = useState<string | null>(null);
+  const [isLoadingDiseaseStats, setIsLoadingDiseaseStats] = useState(true);
+  const [fetchErrorDiseaseStats, setFetchErrorDiseaseStats] = useState<string | null>(null);
+
+  const [ageGroupData, setAgeGroupData] = useState<AgeGroupStat[]>([]);
+  const [isLoadingAgeStats, setIsLoadingAgeStats] = useState(true);
+  const [fetchErrorAgeStats, setFetchErrorAgeStats] = useState<string | null>(null);
+
+  const calculateAge = (dobString: string): number => {
+    const birthDate = new Date(dobString);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  const getAgeGroup = (age: number): string => {
+    if (age <= 10) return "0-10 ans";
+    if (age <= 20) return "11-20 ans";
+    if (age <= 30) return "21-30 ans";
+    if (age <= 40) return "31-40 ans";
+    if (age <= 50) return "41-50 ans";
+    if (age <= 60) return "51-60 ans";
+    if (age <= 70) return "61-70 ans";
+    return "70+ ans";
+  };
 
   const fetchDiseaseStats = useCallback(async () => {
-    setIsLoadingStats(true);
-    setFetchErrorStats(null);
+    setIsLoadingDiseaseStats(true);
+    setFetchErrorDiseaseStats(null);
     try {
       const medicalRecordsRef = collection(db, "dossiersMedicaux");
       const querySnapshot = await getDocs(medicalRecordsRef);
@@ -1359,89 +1390,179 @@ function StatisticsTabContent() {
         const diagnostic = data.diagnostic?.trim();
         if (diagnostic && diagnostic !== "") {
           counts[diagnostic] = (counts[diagnostic] || 0) + 1;
-        } else {
-          // Optionally count "Non spécifié" or handle as needed
-          // counts["Non spécifié"] = (counts["Non spécifié"] || 0) + 1;
         }
       });
 
       const chartData = Object.entries(counts)
         .map(([name, count]) => ({ name, count }))
-        .sort((a, b) => b.count - a.count); // Sort by count descending
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10); // Display top 10 for clarity
       
       setDiseaseData(chartData);
 
     } catch (error: any) {
       console.error("Erreur lors de la récupération des statistiques des maladies :", error);
-      let errorMessage = `Impossible de charger les statistiques. ${error.message || "Erreur inconnue."}`;
+      let errorMessage = `Impossible de charger les statistiques des maladies. ${error.message || "Erreur inconnue."}`;
       if (error.code === 'permission-denied') {
-          errorMessage += " Veuillez vérifier vos règles de sécurité Firestore pour la collection 'dossiersMedicaux'.";
+          errorMessage += " Veuillez vérifier vos règles de sécurité Firestore pour 'dossiersMedicaux'.";
       }
-      setFetchErrorStats(errorMessage);
+      setFetchErrorDiseaseStats(errorMessage);
     } finally {
-      setIsLoadingStats(false);
+      setIsLoadingDiseaseStats(false);
     }
   }, []);
 
+  const fetchAgeStats = useCallback(async () => {
+    setIsLoadingAgeStats(true);
+    setFetchErrorAgeStats(null);
+    try {
+      const patientsSnapshot = await getDocs(collection(db, "patients"));
+      const medicalRecordsSnapshot = await getDocs(collection(db, "dossiersMedicaux"));
+
+      const patientsMap = new Map<string, PatientData>();
+      patientsSnapshot.forEach(doc => {
+        patientsMap.set(doc.id, { id: doc.id, ...doc.data() } as PatientData);
+      });
+
+      const consultedPatientIds = new Set<string>();
+      medicalRecordsSnapshot.forEach(doc => {
+        const recordData = doc.data();
+        if (recordData.patientId) {
+          consultedPatientIds.add(recordData.patientId);
+        }
+      });
+      
+      const ageCounts: { [key: string]: number } = {
+        "0-10 ans": 0, "11-20 ans": 0, "21-30 ans": 0, "31-40 ans": 0,
+        "41-50 ans": 0, "51-60 ans": 0, "61-70 ans": 0, "70+ ans": 0,
+      };
+
+      consultedPatientIds.forEach(patientId => {
+        const patient = patientsMap.get(patientId);
+        if (patient && patient.dob) {
+          const age = calculateAge(patient.dob);
+          const ageGroup = getAgeGroup(age);
+          ageCounts[ageGroup] = (ageCounts[ageGroup] || 0) + 1;
+        }
+      });
+
+      const ageChartData = Object.entries(ageCounts)
+        .map(([ageGroup, count]) => ({ ageGroup, count }));
+      
+      setAgeGroupData(ageChartData);
+
+    } catch (error: any) {
+      console.error("Erreur lors de la récupération des statistiques par âge :", error);
+      let errorMessage = `Impossible de charger les statistiques par âge. ${error.message || "Erreur inconnue."}`;
+      if (error.code === 'permission-denied') {
+          errorMessage += " Veuillez vérifier vos règles de sécurité Firestore pour 'patients' et/ou 'dossiersMedicaux'.";
+      }
+      setFetchErrorAgeStats(errorMessage);
+    } finally {
+      setIsLoadingAgeStats(false);
+    }
+  }, []);
+
+
   useEffect(() => {
     fetchDiseaseStats();
-  }, [fetchDiseaseStats]);
+    fetchAgeStats();
+  }, [fetchDiseaseStats, fetchAgeStats]);
 
   return (
     <div className="space-y-6">
        <h1 className="text-3xl font-semibold">Statistiques et Visualisations</h1>
       <Card>
         <CardHeader>
-          <CardTitle>Maladies les plus fréquentes</CardTitle>
+          <CardTitle>Maladies les plus fréquentes (Top 10)</CardTitle>
           <CardDescription>Distribution des maladies diagnostiquées dans les dossiers médicaux.</CardDescription>
         </CardHeader>
         <CardContent className="h-[400px] w-full">
-          {isLoadingStats && (
+          {isLoadingDiseaseStats && (
             <div className="flex justify-center items-center h-full">
               <Loader2 className="mr-2 h-8 w-8 animate-spin text-primary" />
-              <p>Chargement des statistiques...</p>
+              <p>Chargement des statistiques des maladies...</p>
             </div>
           )}
-          {!isLoadingStats && fetchErrorStats && (
+          {!isLoadingDiseaseStats && fetchErrorDiseaseStats && (
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>Erreur de chargement</AlertTitle>
-              <AlertDescription>{fetchErrorStats}</AlertDescription>
+              <AlertDescription>{fetchErrorDiseaseStats}</AlertDescription>
             </Alert>
           )}
-          {!isLoadingStats && !fetchErrorStats && diseaseData.length === 0 && (
+          {!isLoadingDiseaseStats && !fetchErrorDiseaseStats && diseaseData.length === 0 && (
             <p className="text-muted-foreground text-center py-8">
               Aucune donnée de diagnostic trouvée pour générer les statistiques.
             </p>
           )}
-          {!isLoadingStats && !fetchErrorStats && diseaseData.length > 0 && (
+          {!isLoadingDiseaseStats && !fetchErrorDiseaseStats && diseaseData.length > 0 && (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={diseaseData}>
+              <BarChart data={diseaseData} layout="vertical" margin={{ right: 30, left: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis allowDecimals={false} />
+                <XAxis type="number" allowDecimals={false}/>
+                <YAxis dataKey="name" type="category" width={150} />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="count" fill="hsl(var(--primary))" name="Nombre de cas" />
+                <Bar dataKey="count" fill="hsl(var(--primary))" name="Nombre de cas" barSize={20} />
               </BarChart>
             </ResponsiveContainer>
           )}
         </CardContent>
       </Card>
-      {/* Placeholder for other statistics */}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Répartition des Patients Ayant Consulté par Tranche d'Âge</CardTitle>
+          <CardDescription>Distribution par âge des patients ayant au moins un dossier médical.</CardDescription>
+        </CardHeader>
+        <CardContent className="h-[400px] w-full">
+          {isLoadingAgeStats && (
+            <div className="flex justify-center items-center h-full">
+              <Loader2 className="mr-2 h-8 w-8 animate-spin text-primary" />
+              <p>Chargement des statistiques par âge...</p>
+            </div>
+          )}
+          {!isLoadingAgeStats && fetchErrorAgeStats && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Erreur de chargement</AlertTitle>
+              <AlertDescription>{fetchErrorAgeStats}</AlertDescription>
+            </Alert>
+          )}
+          {!isLoadingAgeStats && !fetchErrorAgeStats && ageGroupData.every(d => d.count === 0) && (
+            <p className="text-muted-foreground text-center py-8">
+              Aucune donnée de consultation ou de patient trouvée pour générer les statistiques par âge.
+            </p>
+          )}
+          {!isLoadingAgeStats && !fetchErrorAgeStats && !ageGroupData.every(d => d.count === 0) && (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={ageGroupData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="ageGroup" />
+                <YAxis allowDecimals={false} />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="count" fill="hsl(var(--accent))" name="Nombre de Patients" />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
+      
       <Card>
           <CardHeader>
-            <CardTitle>Autres Statistiques (Exemples)</CardTitle>
+            <CardTitle>Autres Statistiques (À Venir)</CardTitle>
             <CardDescription>D'autres visualisations pourront être ajoutées ici.</CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground">
-              Exemples de statistiques à venir :
+              Exemples de statistiques futures :
             </p>
             <ul className="list-disc list-inside text-muted-foreground text-sm space-y-1 mt-2">
-                <li>Cas de guérison vs. Cas de décès (nécessite d'ajouter un champ "résultat" aux dossiers)</li>
-                <li>Répartition des patients par tranche d'âge</li>
+                <li>Cas de guérison vs. Cas de décès (nécessite un champ "résultat" dans les dossiers médicaux)</li>
                 <li>Statistiques sur les types de rendez-vous (nouveaux, suivi, urgence)</li>
+                <li>Taux de rendez-vous manqués</li>
             </ul>
           </CardContent>
         </Card>
@@ -1527,3 +1648,4 @@ export default function DashboardPage() {
     
 
     
+
