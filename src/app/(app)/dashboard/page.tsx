@@ -17,7 +17,7 @@ import { useState, useEffect, Suspense, useMemo, useCallback } from "react";
 import type { EmergencyCaseAnalysis } from "@/ai/flows/emergency-flow";
 import { analyzeEmergencyCase } from "@/ai/flows/emergency-flow";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, BrainCircuit, Users, CalendarDays, LineChartIcon, ShieldCheck, PlusCircle, Eye, Search, FileText, CalendarIcon as LucideCalendarIcon, Loader2, AlertTriangle, Users2 } from "lucide-react";
+import { Terminal, BrainCircuit, Users, CalendarDays, LineChartIcon, ShieldCheck, PlusCircle, Eye, Search, FileText, CalendarIcon as LucideCalendarIcon, Loader2, AlertTriangle, Users2, CreditCard, DollarSign } from "lucide-react";
 import Link from 'next/link';
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, orderBy, Timestamp, doc, getDoc, addDoc, serverTimestamp } from "firebase/firestore";
@@ -253,6 +253,8 @@ interface AppointmentData {
   dateTime: Timestamp; 
   status: 'Prévu' | 'Terminé' | 'Annulé' | 'Absent' | string; 
   reason?: string;
+  consultationFee?: number;
+  paymentStatus?: 'Impayé' | 'Payé';
 }
 
 const appointmentFormSchema = z.object({
@@ -262,6 +264,10 @@ const appointmentFormSchema = z.object({
   appointmentHour: z.string().regex(/^([01]\d|2[0-3])$/, { message: "Heure invalide (00-23)." }),
   appointmentMinute: z.string().regex(/^[0-5]\d$/, { message: "Minute invalide (00-59)." }),
   reason: z.string().min(5, { message: "Le motif doit contenir au moins 5 caractères." }).optional().or(z.literal('')),
+  consultationFee: z.preprocess(
+    (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
+    z.number({ invalid_type_error: "Les frais doivent être un nombre." }).positive({ message: "Les frais doivent être un nombre positif." }).optional()
+  ),
 });
 type AppointmentFormValues = z.infer<typeof appointmentFormSchema>;
 
@@ -285,6 +291,7 @@ function AppointmentsTabContent() {
       appointmentHour: "09",
       appointmentMinute: "00",
       reason: "",
+      consultationFee: undefined,
     },
   });
 
@@ -307,7 +314,9 @@ function AppointmentsTabContent() {
           doctorName: data.doctorName || "N/A",
           dateTime: data.dateTime,
           status: data.status || "Inconnu",
-          reason: data.reason
+          reason: data.reason,
+          consultationFee: data.consultationFee,
+          paymentStatus: data.paymentStatus
         } as AppointmentData);
       });
       setAppointmentsList(fetchedAppointments);
@@ -368,15 +377,20 @@ function AppointmentsTabContent() {
       appointmentDateTime.setSeconds(0);
       appointmentDateTime.setMilliseconds(0);
 
-      const newAppointment = {
+      const newAppointment: any = {
         patientId: data.patientId,
         patientName: `${selectedPatient.firstName} ${selectedPatient.lastName}`,
         doctorName: data.doctorName,
         dateTime: Timestamp.fromDate(appointmentDateTime),
         reason: data.reason || "",
         status: "Prévu", 
+        paymentStatus: "Impayé",
         createdAt: serverTimestamp(),
       };
+      if (data.consultationFee !== undefined && data.consultationFee > 0) {
+        newAppointment.consultationFee = data.consultationFee;
+      }
+
 
       await addDoc(collection(db, "appointments"), newAppointment);
       toast.success("Rendez-vous planifié avec succès !");
@@ -399,6 +413,11 @@ function AppointmentsTabContent() {
     if (status === 'Prévu') return 'bg-blue-100 text-blue-700 dark:bg-blue-700/30 dark:text-blue-300';
     if (status === 'Absent') return 'bg-orange-100 text-orange-700 dark:bg-orange-700/30 dark:text-orange-300';
     return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-700/30 dark:text-yellow-300'; // Default/Unknown
+  };
+  
+  const getPaymentStatusClass = (status?: 'Impayé' | 'Payé') => {
+    if (status === 'Payé') return 'bg-green-100 text-green-700 dark:bg-green-700/30 dark:text-green-300';
+    return 'bg-red-100 text-red-700 dark:bg-red-700/30 dark:text-red-300'; // Impayé or undefined
   };
 
 
@@ -536,7 +555,6 @@ function AppointmentsTabContent() {
                     />
                 </div>
 
-
                 <FormField
                   control={appointmentForm.control}
                   name="reason"
@@ -545,6 +563,19 @@ function AppointmentsTabContent() {
                       <FormLabel>Motif de la consultation (Optionnel)</FormLabel>
                       <FormControl>
                         <Textarea placeholder="Ex: Consultation de suivi, symptômes grippaux..." {...field} disabled={isSubmittingAppointment} rows={3} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={appointmentForm.control}
+                  name="consultationFee"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Frais de consultation (Optionnel)</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="50" {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))} value={field.value ?? ""} disabled={isSubmittingAppointment} step="0.01" min="0" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -594,7 +625,9 @@ function AppointmentsTabContent() {
                     <th scope="col" className="px-6 py-3">Patient</th>
                     <th scope="col" className="px-6 py-3">Date et Heure</th>
                     <th scope="col" className="px-6 py-3">Médecin</th>
-                    <th scope="col" className="px-6 py-3">Statut</th>
+                    <th scope="col" className="px-6 py-3">Statut RDV</th>
+                    <th scope="col" className="px-6 py-3">Frais (€)</th>
+                    <th scope="col" className="px-6 py-3">Paiement</th>
                     <th scope="col" className="px-6 py-3">Actions</th>
                   </tr>
                 </thead>
@@ -609,6 +642,12 @@ function AppointmentsTabContent() {
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusClassForList(rdv.status)}`}>
                           {rdv.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">{typeof rdv.consultationFee === 'number' ? rdv.consultationFee.toFixed(2) : 'N/A'}</td>
+                      <td className="px-6 py-4">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPaymentStatusClass(rdv.paymentStatus)}`}>
+                          {rdv.paymentStatus || 'Impayé'}
                         </span>
                       </td>
                       <td className="px-6 py-4">
