@@ -17,14 +17,14 @@ import { doc, getDoc, collection, query, where, orderBy, getDocs, Timestamp } fr
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
-// Input Schema for the flow
-export const PatientIdInputSchema = z.object({
+// Input Schema for the flow - NOT EXPORTED
+const PatientIdInputSchema = z.object({
   patientId: z.string().min(1, { message: "L'ID du patient ne peut pas être vide." }),
 });
 export type PatientIdInput = z.infer<typeof PatientIdInputSchema>;
 
-// Output Schema for the flow
-export const PatientSummaryOutputSchema = z.object({
+// Output Schema for the flow - NOT EXPORTED
+const PatientSummaryOutputSchema = z.object({
   summary: z.string().describe("Un résumé concis de l'historique médical et de l'état actuel du patient."),
 });
 export type PatientSummaryOutput = z.infer<typeof PatientSummaryOutputSchema>;
@@ -161,3 +161,4 @@ export async function summarizePatientHistory(input: PatientIdInput): Promise<Pa
   }
   return summarizePatientHistoryFlow(validationResult.data);
 }
+
