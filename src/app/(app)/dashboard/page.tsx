@@ -240,12 +240,45 @@ interface PatientData {
   dob: string; 
   phone?: string;
   email?: string;
-  service?: string; // Added service
+  service?: string; 
   createdAt?: Timestamp; 
 }
 
 function PatientsTabContent() {
-  console.log("[PatientsTabContent] Rendering simplified placeholder.");
+  const [patientsList, setPatientsList] = useState<PatientData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  const fetchPatients = useCallback(async () => {
+    setIsLoading(true);
+    setFetchError(null);
+    try {
+      const patientsCollectionRef = collection(db, "patients");
+      const q = query(patientsCollectionRef, orderBy("lastName", "asc"));
+      const querySnapshot = await getDocs(q);
+      const fetchedPatients: PatientData[] = [];
+      querySnapshot.forEach((doc) => {
+        fetchedPatients.push({ id: doc.id, ...doc.data() } as PatientData);
+      });
+      setPatientsList(fetchedPatients);
+    } catch (error: any) {
+      console.error("Erreur lors de la récupération des patients :", error);
+      let errorMessage = `Impossible de charger la liste des patients. ${error.message || "Erreur inconnue."}`;
+       if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes("permission"))) {
+          errorMessage += " Veuillez vérifier vos règles de sécurité Firestore pour la collection 'patients'.";
+      } else if (error.message && error.message.toLowerCase().includes("index")) {
+        errorMessage += " Un index Firestore est requis. Veuillez vérifier la console Firebase pour créer l'index suggéré pour la collection 'patients' (tri par lastName asc).";
+      }
+      setFetchError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPatients();
+  }, [fetchPatients]);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -258,14 +291,57 @@ function PatientsTabContent() {
         <CardHeader>
           <CardTitle>Liste des Patients</CardTitle>
           <CardDescription>
-            Contenu de la liste des patients temporairement désactivé pour débogage.
-            Le champ "Service" a été ajouté à la création du patient et est visible dans les détails du patient.
+            Visualisez et gérez les informations des patients enregistrés.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-center py-8 text-muted-foreground">
-            La liste des patients est en cours de maintenance.
-          </p>
+          {isLoading && <p className="text-center py-8 text-muted-foreground flex items-center justify-center"><Loader2 className="mr-2 h-5 w-5 animate-spin" />Chargement des patients...</p>}
+          {!isLoading && fetchError && (
+            <Alert variant="destructive" className="mt-4">
+              <Terminal className="h-4 w-4" />
+              <AlertTitle>Erreur de Chargement</AlertTitle>
+              <AlertDescription>{fetchError}</AlertDescription>
+            </Alert>
+          )}
+          {!isLoading && !fetchError && patientsList.length === 0 && (
+            <p className="text-muted-foreground text-center py-8">
+              Aucun patient enregistré pour le moment.
+            </p>
+          )}
+          {!isLoading && !fetchError && patientsList.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="text-xs text-muted-foreground uppercase bg-muted/50">
+                  <tr>
+                    <th scope="col" className="px-6 py-3">Nom</th>
+                    <th scope="col" className="px-6 py-3">Prénom</th>
+                    <th scope="col" className="px-6 py-3">Date de Naissance</th>
+                    <th scope="col" className="px-6 py-3">Service</th>
+                    <th scope="col" className="px-6 py-3">Téléphone</th>
+                    <th scope="col" className="px-6 py-3">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {patientsList.map((patient) => (
+                    <tr key={patient.id} className="border-b hover:bg-muted/30">
+                      <td className="px-6 py-4 font-medium">{patient.lastName}</td>
+                      <td className="px-6 py-4">{patient.firstName}</td>
+                      <td className="px-6 py-4">
+                        {patient.dob ? format(new Date(patient.dob), 'dd/MM/yyyy', { locale: fr }) : 'N/A'}
+                      </td>
+                      <td className="px-6 py-4">{patient.service || "N/A"}</td>
+                      <td className="px-6 py-4">{patient.phone || "N/A"}</td>
+                      <td className="px-6 py-4">
+                        <Button variant="outline" size="sm" asChild>
+                           <Link href={`/patients/${patient.id}`}><Eye className="mr-2 h-4 w-4" />Détails</Link>
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
