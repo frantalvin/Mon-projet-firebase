@@ -26,7 +26,7 @@ interface PatientFirestoreData {
   adresse?: string;
   phone?: string;
   email?: string;
-  service?: string; // Added service
+  service?: string; 
   createdAt?: Timestamp;
 }
 
@@ -39,6 +39,7 @@ interface MedicalRecordFirestoreData {
   symptomes?: string;
   traitementPrescrit?: string;
   notesMedecin?: string;
+  issueConsultation?: string; // Champ ajouté
   createdAt?: Timestamp;
   doctorName?: string;
   doctorSpecialty?: string;
@@ -50,7 +51,7 @@ interface HealthReportData {
     id: string;
     nom: string;
     dateNaissance: string;
-    service?: string; // Added service
+    service?: string; 
     adresse?: string;
     telephone?: string;
     email?: string;
@@ -68,6 +69,7 @@ interface HealthReportData {
   }[];
   conseils: string;
   prochainRendezVous?: string;
+  issueConsultation?: string; // Champ ajouté
 }
 
 function HealthReportDialog({ reportData, open, onOpenChange }: { reportData: HealthReportData | null, open: boolean, onOpenChange: (open: boolean) => void }) {
@@ -129,11 +131,12 @@ function HealthReportDialog({ reportData, open, onOpenChange }: { reportData: He
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Diagnostic et Traitement</CardTitle>
+              <CardTitle className="text-lg">Diagnostic, Traitement et Issue</CardTitle>
             </CardHeader>
             <CardContent className="text-sm space-y-1">
               <p><strong>Symptômes Rapportés:</strong> {reportData.symptomes}</p>
               <p><strong>Diagnostic (Maladie):</strong> {reportData.diagnostic}</p>
+              {reportData.issueConsultation && <p><strong>Issue de la consultation:</strong> {reportData.issueConsultation}</p>}
               <div className="pt-2">
                 <h4 className="font-semibold">Traitement(s) Prescrit(s):</h4>
                 {reportData.traitement.map((t, index) => (
@@ -211,6 +214,20 @@ function AiAnalysisDialog({ analysis, error, open, onOpenChange, isLoading }: { 
     </Dialog>
   );
 }
+
+// Correspond à `consultationOutcomes` dans dashboard/page.tsx
+const consultationOutcomeLabels: { [key: string]: string } = {
+  "En cours": "En cours de traitement",
+  "Guérison": "Guérison",
+  "Amélioration": "Amélioration",
+  "Stable": "Stable",
+  "Évacuation": "Évacuation (Référé)",
+  "Échec thérapeutique": "Échec thérapeutique",
+  "Complications": "Complications",
+  "Décès": "Décès",
+  "Naissance": "Naissance",
+  "Autre": "Autre",
+};
 
 
 export default function PatientDetailPage({ params: paramsProp }: { params: { id: string } }) {
@@ -368,6 +385,7 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
     traitement: medicalHistory[0]?.traitementPrescrit ? [{ medicament: medicalHistory[0].traitementPrescrit, posologie: "Selon prescription" }] : [{ medicament: "Paracétamol", posologie: "1g 3x/jour (données exemples)" }],
     conseils: medicalHistory[0]?.notesMedecin || "Reposez-vous bien, hydratez-vous (données exemples).", 
     prochainRendezVous: "Dans 7 jours si pas d'amélioration (données exemples).", 
+    issueConsultation: medicalHistory[0]?.issueConsultation ? (consultationOutcomeLabels[medicalHistory[0].issueConsultation] || medicalHistory[0].issueConsultation) : "Non spécifiée",
   } : null;
 
 
@@ -476,6 +494,7 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
                         </h4>
                         {entry.motifConsultation && <p className="text-sm"><strong>Motif :</strong> {entry.motifConsultation}</p>}
                         {entry.diagnostic && <p className="text-sm"><strong>Diagnostic :</strong> {entry.diagnostic}</p>}
+                        {entry.issueConsultation && <p className="text-sm"><strong>Issue :</strong> {consultationOutcomeLabels[entry.issueConsultation] || entry.issueConsultation}</p>}
                     </div>
                     <Button variant="outline" size="sm" asChild disabled={!entry.id}>
                        <Link href={entry.id ? `/medical-records/${entry.id}` : '#'}>
@@ -509,3 +528,4 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
     </div>
   );
 }
+

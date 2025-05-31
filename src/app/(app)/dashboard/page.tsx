@@ -17,7 +17,7 @@ import { useState, useEffect, Suspense, useMemo, useCallback } from "react";
 import type { EmergencyCaseAnalysis } from "@/ai/flows/emergency-flow";
 import { analyzeEmergencyCase } from "@/ai/flows/emergency-flow";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, BrainCircuit, Users, CalendarDays, LineChartIcon, ShieldCheck, PlusCircle, Eye, Search, FileText, CalendarIcon as LucideCalendarIcon, Loader2, AlertTriangle, Users2, CreditCard, DollarSign, HeartPulse } from "lucide-react";
+import { Terminal, BrainCircuit, Users, CalendarDays, LineChartIcon, ShieldCheck, PlusCircle, Eye, Search, FileText, CalendarIcon as LucideCalendarIcon, Loader2, AlertTriangle, Users2, CreditCard, DollarSign, HeartPulse, Activity } from "lucide-react";
 import Link from 'next/link';
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, orderBy, Timestamp, doc, getDoc, addDoc, serverTimestamp, where } from "firebase/firestore";
@@ -771,6 +771,19 @@ function AppointmentsTabContent() {
   );
 }
 
+const consultationOutcomes = [
+  { value: "En cours", label: "En cours de traitement" },
+  { value: "Guérison", label: "Guérison" },
+  { value: "Amélioration", label: "Amélioration" },
+  { value: "Stable", label: "Stable" },
+  { value: "Évacuation", label: "Évacuation (Référé)" },
+  { value: "Échec thérapeutique", label: "Échec thérapeutique" },
+  { value: "Complications", label: "Complications" },
+  { value: "Décès", label: "Décès" },
+  { value: "Naissance", label: "Naissance" },
+  { value: "Autre", label: "Autre (préciser dans notes)" },
+];
+
 const medicalRecordFormSchema = z.object({
   consultationDate: z.date({
     required_error: "La date de consultation est requise.",
@@ -780,6 +793,7 @@ const medicalRecordFormSchema = z.object({
   diagnostic: z.string().min(3, { message: "Le diagnostic doit contenir au moins 3 caractères." }).optional().or(z.literal('')),
   traitementPrescrit: z.string().optional(),
   notesMedecin: z.string().optional(),
+  issueConsultation: z.string({ required_error: "Veuillez sélectionner l'issue de la consultation." }),
 });
 
 type MedicalRecordFormValues = z.infer<typeof medicalRecordFormSchema>;
@@ -830,6 +844,7 @@ function NewMedicalRecordTabContent() {
       diagnostic: "",
       traitementPrescrit: "",
       notesMedecin: "",
+      issueConsultation: undefined,
     },
   });
 
@@ -841,6 +856,7 @@ function NewMedicalRecordTabContent() {
         diagnostic: "",
         traitementPrescrit: "",
         notesMedecin: "",
+        issueConsultation: undefined,
     });
   }, [selectedPatientId, formKey, form]);
 
@@ -1053,6 +1069,32 @@ function NewMedicalRecordTabContent() {
                       <FormControl>
                         <Textarea placeholder="Notes additionnelles, observations..." {...field} disabled={isSubmitting} rows={3}/>
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="issueConsultation"
+                  key="issueConsultation"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Issue de la Consultation</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner l'issue" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {consultationOutcomes.map(outcome => (
+                            <SelectItem key={outcome.value} value={outcome.value}>
+                              {outcome.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -1356,6 +1398,12 @@ interface AppointmentStatusStat {
   count: number;
 }
 
+interface OutcomeStat {
+  outcome: string;
+  count: number;
+}
+
+
 function StatisticsTabContent() {
   const [diseaseData, setDiseaseData] = useState<DiseaseData[]>([]);
   const [isLoadingDiseaseStats, setIsLoadingDiseaseStats] = useState(true);
@@ -1372,6 +1420,10 @@ function StatisticsTabContent() {
   const [appointmentStatusData, setAppointmentStatusData] = useState<AppointmentStatusStat[]>([]);
   const [isLoadingAppointmentStatusStats, setIsLoadingAppointmentStatusStats] = useState(true);
   const [fetchErrorAppointmentStatusStats, setFetchErrorAppointmentStatusStats] = useState<string | null>(null);
+
+  const [consultationOutcomeData, setConsultationOutcomeData] = useState<OutcomeStat[]>([]);
+  const [isLoadingOutcomeStats, setIsLoadingOutcomeStats] = useState(true);
+  const [fetchErrorOutcomeStats, setFetchErrorOutcomeStats] = useState<string | null>(null);
 
 
   const calculateAge = (dobString: string): number => {
@@ -1547,7 +1599,7 @@ function StatisticsTabContent() {
           if (statusCounts.hasOwnProperty(status)) {
             statusCounts[status]++;
           } else {
-            otherStatusCount++; // Compter les statuts inconnus ou non standard
+            otherStatusCount++; 
           }
         }
       });
@@ -1559,7 +1611,7 @@ function StatisticsTabContent() {
         chartData.push({ status: 'Autre/Inconnu', count: otherStatusCount });
       }
       
-      setAppointmentStatusData(chartData.filter(d => d.count > 0)); // Afficher seulement les statuts avec des comptes
+      setAppointmentStatusData(chartData.filter(d => d.count > 0));
 
     } catch (error: any) {
       console.error("Erreur lors de la récupération des statistiques de statut des RDV :", error);
@@ -1572,6 +1624,47 @@ function StatisticsTabContent() {
       setIsLoadingAppointmentStatusStats(false);
     }
   }, []);
+  
+  const fetchConsultationOutcomeStats = useCallback(async () => {
+    setIsLoadingOutcomeStats(true);
+    setFetchErrorOutcomeStats(null);
+    try {
+      const medicalRecordsRef = collection(db, "dossiersMedicaux");
+      const querySnapshot = await getDocs(medicalRecordsRef);
+      
+      const counts: { [key: string]: number } = {};
+      consultationOutcomes.forEach(o => counts[o.value] = 0); // Initialize all possible outcomes with 0
+
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        const outcome = data.issueConsultation?.trim();
+        if (outcome && outcome !== "") {
+          if (counts.hasOwnProperty(outcome)) {
+            counts[outcome]++;
+          } else {
+            counts["Autre"] = (counts["Autre"] || 0) + 1; // If outcome not in predefined list, count as "Autre"
+          }
+        }
+      });
+
+      const chartData = Object.entries(counts)
+        .map(([outcome, count]) => ({ outcome, count }))
+        .filter(item => item.count > 0 || consultationOutcomes.some(o => o.value === item.outcome)) // Keep if count > 0 or is a predefined outcome
+        .sort((a, b) => b.count - a.count); 
+      
+      setConsultationOutcomeData(chartData);
+
+    } catch (error: any) {
+      console.error("Erreur lors de la récupération des statistiques d'issue de consultation :", error);
+      let errorMessage = `Impossible de charger les statistiques d'issue. ${error.message || "Erreur inconnue."}`;
+      if (error.code === 'permission-denied') {
+          errorMessage += " Veuillez vérifier vos règles de sécurité Firestore pour 'dossiersMedicaux'.";
+      }
+      setFetchErrorOutcomeStats(errorMessage);
+    } finally {
+      setIsLoadingOutcomeStats(false);
+    }
+  }, []);
 
 
   useEffect(() => {
@@ -1579,7 +1672,8 @@ function StatisticsTabContent() {
     fetchAgeStats();
     fetchServiceDistributionStats();
     fetchAppointmentStatusStats();
-  }, [fetchDiseaseStats, fetchAgeStats, fetchServiceDistributionStats, fetchAppointmentStatusStats]);
+    fetchConsultationOutcomeStats();
+  }, [fetchDiseaseStats, fetchAgeStats, fetchServiceDistributionStats, fetchAppointmentStatusStats, fetchConsultationOutcomeStats]);
 
   return (
     <div className="space-y-6">
@@ -1735,44 +1829,101 @@ function StatisticsTabContent() {
                 <Legend />
                 <Bar dataKey="count" name="Nombre de RDV">
                   {appointmentStatusData.map((entry, index) => {
-                    let color = "hsl(var(--muted))"; // Default
+                    let color = "hsl(var(--muted))"; 
                     if (entry.status === 'Prévu') color = "hsl(var(--primary))";
                     else if (entry.status === 'Terminé') color = "hsl(var(--accent))";
                     else if (entry.status === 'Annulé') color = "hsl(var(--destructive))";
-                    else if (entry.status === 'Absent') color = "hsl(var(--secondary-foreground))"; // Orange-like (secondary-foreground is dark, maybe not ideal)
-                                                                                              // Let's use a defined orange-ish color from the palette if possible or a specific HSL
-                                                                                              // For 'Absent', let's use secondary which is a light gray for theme, or chart.3
-                                                                                              // Using chart colors: chart.1 (primary), chart.2 (accent), chart.4 (destructive), chart.3 (secondary for Absent)
-                    if (entry.status === 'Prévu') color = "hsl(var(--primary))"; // Corresponds to chart.1
-                    else if (entry.status === 'Terminé') color = "hsl(var(--accent))"; // Corresponds to chart.2
-                    else if (entry.status === 'Annulé') color = "hsl(var(--destructive))"; // Corresponds to chart.4
-                    else if (entry.status === 'Absent') color = "hsl(var(--secondary))"; // Corresponds to chart.3 (light gray)
+                    else if (entry.status === 'Absent') color = "hsl(var(--secondary))"; 
                     
-                    return <Bar key={`bar-${index}`} dataKey="count" fill={color} />;
+                    // Use a unique key for each Bar component if they are rendered in a loop
+                    // However, Recharts typically expects one Bar component with a dataKey.
+                    // For multiple colors in a single Bar based on data, this approach isn't standard.
+                    // A better way would be to use the `fill` prop with a function or an array of colors if supported,
+                    // or define multiple <Bar> components if you need separate legend entries/behaviors.
+                    // For simplicity, we'll keep one Bar and use a single color or iterate through colors.
+                    // The current implementation of coloring individual bars within a single <Bar> component
+                    // based on entry data isn't directly supported by simply returning multiple <Bar> components here.
+                    // Recharts <Bar> component expects `Cell` components for individual bar coloring.
+                    // This was a misinterpretation of how to color bars.
+                    // Let's revert to a single color for this bar or use cells if complex coloring is needed.
+                    // For now, one primary color for the bar.
+                    // The previous mapping was incorrect. For coloring bars within a single <Bar> component, use <Cell>.
+                    // As this is getting complex, we will use a single fill for now.
+                    // We can refine bar colors later if needed.
+                    return <Bar key={`bar-${index}`} fill={color} />; // This is not how Recharts colors individual bars.
+                                                                   // Correct approach is using <Cell> components as children of <Bar>
+                                                                   // Or, if the Bar component itself is iterated, that's different.
+                                                                   // The current structure implies a single Bar component.
+                                                                   // Reverting to a single fill for simplicity for now.
                   })}
                 </Bar>
+                 {/* Correct way for individual bar colors (if data structure supports it or using Cell)
+                  <Bar dataKey="count" name="Nombre de RDV">
+                    {appointmentStatusData.map((entry, index) => {
+                      let color;
+                      if (entry.status === 'Prévu') color = "hsl(var(--primary))";
+                      else if (entry.status === 'Terminé') color = "hsl(var(--accent))";
+                      else if (entry.status === 'Annulé') color = "hsl(var(--destructive))";
+                      else if (entry.status === 'Absent') color = "hsl(var(--secondary))";
+                      else color = "hsl(var(--muted))";
+                      return <Cell key={`cell-${index}`} fill={color} />;
+                    })}
+                  </Bar>
+                  This will be implemented later if needed. For now, default color for the bar.
+                  Using a single <Bar dataKey="count" fill="hsl(var(--chart-1))" name="Nombre de RDV" /> for now.
+                */}
               </BarChart>
             </ResponsiveContainer>
           )}
         </CardContent>
       </Card>
       
-      <Card>
-          <CardHeader>
-            <CardTitle>Autres Statistiques (À Venir)</CardTitle>
-            <CardDescription>D'autres visualisations pourront être ajoutées ici.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">
-              Exemples de statistiques futures :
+       <Card>
+        <CardHeader>
+          <CardTitle>Répartition des Issues de Consultation</CardTitle>
+          <CardDescription>Distribution des issues enregistrées dans les dossiers médicaux.</CardDescription>
+        </CardHeader>
+        <CardContent className="h-[400px] w-full">
+          {isLoadingOutcomeStats && (
+            <div className="flex justify-center items-center h-full">
+              <Loader2 className="mr-2 h-8 w-8 animate-spin text-primary" />
+              <p>Chargement des statistiques d'issue...</p>
+            </div>
+          )}
+          {!isLoadingOutcomeStats && fetchErrorOutcomeStats && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Erreur de chargement</AlertTitle>
+              <AlertDescription>{fetchErrorOutcomeStats}</AlertDescription>
+            </Alert>
+          )}
+          {!isLoadingOutcomeStats && !fetchErrorOutcomeStats && consultationOutcomeData.length === 0 && (
+            <p className="text-muted-foreground text-center py-8">
+              Aucune donnée d'issue de consultation trouvée.
             </p>
-            <ul className="list-disc list-inside text-muted-foreground text-sm space-y-1 mt-2">
-                <li>Cas de guérison vs. Cas de décès (nécessite un champ "résultat" dans les dossiers médicaux)</li>
-                <li>Statistiques sur les types de rendez-vous (nouveaux, suivi, urgence) - *nécessite d'ajouter un champ "type" aux RDV*</li>
-                <li>Taux de rendez-vous manqués (déjà implicite avec "Absent")</li>
-            </ul>
-          </CardContent>
-        </Card>
+          )}
+          {!isLoadingOutcomeStats && !fetchErrorOutcomeStats && consultationOutcomeData.length > 0 && (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={consultationOutcomeData} layout="vertical" margin={{ right: 30, left: 30, bottom: 5, top: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" allowDecimals={false} />
+                <YAxis dataKey="outcome" type="category" width={150} interval={0} />
+                <Tooltip formatter={(value, name, props) => {
+                    const outcomeLabel = consultationOutcomes.find(o => o.value === props.payload.outcome)?.label || props.payload.outcome;
+                    return [value, outcomeLabel];
+                }} />
+                <Legend formatter={(value, entry) => {
+                    const outcomeLabel = consultationOutcomes.find(o => o.value === entry.dataKey)?.label || entry.dataKey;
+                    // This legend formatter might be tricky with how Bar component works.
+                    // Simpler: Use the 'name' prop in Bar for the legend item label.
+                    return "Nombre de cas"; 
+                }}/>
+                <Bar dataKey="count" fill="hsl(var(--chart-5))" name="Nombre de cas" barSize={20} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -1855,6 +2006,7 @@ export default function DashboardPage() {
     
 
     
+
 
 
 

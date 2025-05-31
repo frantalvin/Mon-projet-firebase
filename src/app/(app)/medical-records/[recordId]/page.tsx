@@ -9,21 +9,21 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc, Timestamp } from "firebase/firestore";
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { AlertTriangle, Loader2, ArrowLeft } from "lucide-react";
+import { AlertTriangle, Loader2, ArrowLeft, Activity } from "lucide-react";
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
 // Interface pour les données d'un dossier médical (à affiner selon votre structure exacte)
 interface MedicalRecordData {
   id: string;
-  patientId: string; // Pour référence, peut-être pour afficher le nom du patient
+  patientId: string; 
   consultationDate: Timestamp;
   motifConsultation?: string;
   diagnostic?: string;
   symptomes?: string;
-  traitementPrescrit?: string; // Pourrait être un objet ou un tableau
+  traitementPrescrit?: string; 
   notesMedecin?: string;
-  // Ajoutez d'autres champs pertinents ici: résultats d'examens, etc.
+  issueConsultation?: string; // Champ ajouté
 }
 
 // Interface pour les informations du patient liées (simplifiée)
@@ -31,6 +31,21 @@ interface PatientInfo {
   firstName: string;
   lastName: string;
 }
+
+// Correspond à `consultationOutcomes` dans dashboard/page.tsx
+const consultationOutcomeLabels: { [key: string]: string } = {
+  "En cours": "En cours de traitement",
+  "Guérison": "Guérison",
+  "Amélioration": "Amélioration",
+  "Stable": "Stable",
+  "Évacuation": "Évacuation (Référé)",
+  "Échec thérapeutique": "Échec thérapeutique",
+  "Complications": "Complications",
+  "Décès": "Décès",
+  "Naissance": "Naissance",
+  "Autre": "Autre",
+};
+
 
 export default function MedicalRecordDetailPage({ params: paramsProp }: { params: { recordId: string } }) {
   const resolvedParams = use(paramsProp);
@@ -52,15 +67,13 @@ export default function MedicalRecordDetailPage({ params: paramsProp }: { params
       setIsLoading(true);
       setError(null);
       try {
-        // Récupérer les détails du dossier médical
-        const recordDocRef = doc(db, "dossiersMedicaux", recordId); // Assurez-vous que "dossiersMedicaux" est le nom correct de votre collection
+        const recordDocRef = doc(db, "dossiersMedicaux", recordId); 
         const recordDocSnap = await getDoc(recordDocRef);
 
         if (recordDocSnap.exists()) {
           const recordData = { id: recordDocSnap.id, ...recordDocSnap.data() } as MedicalRecordData;
           setMedicalRecord(recordData);
 
-          // Optionnel: Récupérer les infos du patient lié si patientId est présent dans le dossier médical
           if (recordData.patientId) {
             const patientDocRef = doc(db, "patients", recordData.patientId);
             const patientDocSnap = await getDoc(patientDocRef);
@@ -111,6 +124,10 @@ export default function MedicalRecordDetailPage({ params: paramsProp }: { params
     );
   }
 
+  const displayOutcome = medicalRecord.issueConsultation 
+    ? consultationOutcomeLabels[medicalRecord.issueConsultation] || medicalRecord.issueConsultation
+    : null;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -158,16 +175,24 @@ export default function MedicalRecordDetailPage({ params: paramsProp }: { params
               <p className="whitespace-pre-wrap">{medicalRecord.traitementPrescrit}</p>
             </div>
           )}
+          {displayOutcome && (
+             <div className="flex items-start">
+              <Activity className="h-5 w-5 text-muted-foreground mr-3 mt-0.5" />
+              <div>
+                <h4 className="font-semibold text-base mb-1">Issue de la Consultation</h4>
+                <p>{displayOutcome}</p>
+              </div>
+            </div>
+          )}
           {medicalRecord.notesMedecin && (
             <div>
               <h4 className="font-semibold text-base mb-1">Notes du Médecin</h4>
               <p className="whitespace-pre-wrap">{medicalRecord.notesMedecin}</p>
             </div>
           )}
-          {/* Ajoutez ici d'autres sections pour afficher plus de détails si nécessaire */}
         </CardContent>
       </Card>
-      {/* Possibilité d'ajouter des actions ici : Modifier le dossier, Exporter, etc. */}
     </div>
   );
 }
+
