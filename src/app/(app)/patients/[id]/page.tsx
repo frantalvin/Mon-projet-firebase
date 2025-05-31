@@ -4,7 +4,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BrainCircuit, FileText, Printer, Terminal, AlertTriangle, Loader2, Eye, ArrowLeft } from "lucide-react"; // Removed PlusCircle
+import { BrainCircuit, FileText, Printer, Terminal, AlertTriangle, Loader2, Eye, ArrowLeft, HeartPulse } from "lucide-react"; // Removed PlusCircle, Added HeartPulse
 import { use, useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -26,6 +26,7 @@ interface PatientFirestoreData {
   adresse?: string;
   phone?: string;
   email?: string;
+  service?: string; // Added service
   createdAt?: Timestamp;
 }
 
@@ -49,6 +50,7 @@ interface HealthReportData {
     id: string;
     nom: string;
     dateNaissance: string;
+    service?: string; // Added service
     adresse?: string;
     telephone?: string;
     email?: string;
@@ -108,6 +110,7 @@ function HealthReportDialog({ reportData, open, onOpenChange }: { reportData: He
               <p><strong>ID Patient:</strong> {reportData.patientInfo.id}</p>
               <p><strong>Nom:</strong> {reportData.patientInfo.nom}</p>
               <p><strong>Date de Naissance:</strong> {reportData.patientInfo.dateNaissance}</p>
+              {reportData.patientInfo.service && <p><strong>Service:</strong> {reportData.patientInfo.service}</p>}
               {reportData.patientInfo.adresse && <p><strong>Adresse:</strong> {reportData.patientInfo.adresse}</p>}
               {reportData.patientInfo.telephone && <p><strong>Téléphone:</strong> {reportData.patientInfo.telephone}</p>}
               {reportData.patientInfo.email && <p><strong>Email:</strong> {reportData.patientInfo.email}</p>}
@@ -350,6 +353,7 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
       id: patient.id,
       nom: `${patient.firstName} ${patient.lastName}`,
       dateNaissance: patient.dob ? format(new Date(patient.dob), 'dd MMMM yyyy', { locale: fr }) : 'N/A',
+      service: patient.service || "Non spécifié",
       adresse: patient.adresse || "Non renseignée",
       telephone: patient.phone || "Non renseigné",
       email: patient.email || "Non renseigné",
@@ -421,6 +425,12 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
             <p><strong>Nom Complet :</strong> {patient.firstName} {patient.lastName}</p>
             <p><strong>Date de Naissance :</strong> {patient.dob ? format(new Date(patient.dob), 'dd MMMM yyyy', { locale: fr }) : 'N/A'}</p>
             {patient.sexe && <p><strong>Sexe :</strong> {patient.sexe}</p>}
+            {patient.service && (
+              <div className="flex items-center">
+                <HeartPulse className="h-4 w-4 text-muted-foreground mr-2" />
+                <p><strong>Service :</strong> {patient.service}</p>
+              </div>
+            )}
             <p><strong>Adresse :</strong> {patient.adresse || "Non renseignée"}</p>
             <p><strong>Téléphone :</strong> {patient.phone || "Non renseigné"}</p>
             <p><strong>Email :</strong> {patient.email || "Non renseigné"}</p>
@@ -432,7 +442,6 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
             <CardTitle>Actions Rapides</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-            {/* Bouton Nouvelle Consultation a été déplacé vers PatientsTabContent */}
             <Button onClick={handleOpenReportDialog} variant="outline" className="w-full sm:w-auto" disabled={!patient}>
               <FileText className="mr-2 h-5 w-5" />
               Formulaire de Santé
@@ -500,5 +509,3 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
     </div>
   );
 }
-
-    

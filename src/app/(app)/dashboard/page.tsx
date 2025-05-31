@@ -17,7 +17,7 @@ import { useState, useEffect, Suspense, useMemo, useCallback } from "react";
 import type { EmergencyCaseAnalysis } from "@/ai/flows/emergency-flow";
 import { analyzeEmergencyCase } from "@/ai/flows/emergency-flow";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, BrainCircuit, Users, CalendarDays, LineChartIcon, ShieldCheck, PlusCircle, Eye, Search, FileText, CalendarIcon as LucideCalendarIcon, Loader2, AlertTriangle, Users2, CreditCard, DollarSign } from "lucide-react";
+import { Terminal, BrainCircuit, Users, CalendarDays, LineChartIcon, ShieldCheck, PlusCircle, Eye, Search, FileText, CalendarIcon as LucideCalendarIcon, Loader2, AlertTriangle, Users2, CreditCard, DollarSign, HeartPulse } from "lucide-react";
 import Link from 'next/link';
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, orderBy, Timestamp, doc, getDoc, addDoc, serverTimestamp, where } from "firebase/firestore";
@@ -240,6 +240,7 @@ interface PatientData {
   dob: string; 
   phone?: string;
   email?: string;
+  service?: string; // Added service
   createdAt?: Timestamp; 
 }
 
@@ -258,6 +259,7 @@ function PatientsTabContent() {
           <CardTitle>Liste des Patients</CardTitle>
           <CardDescription>
             Contenu de la liste des patients temporairement désactivé pour débogage.
+            Le champ "Service" a été ajouté à la création du patient et est visible dans les détails du patient.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -486,6 +488,7 @@ function AppointmentsTabContent() {
                             patientsForSelect.map(patient => (
                               <SelectItem key={patient.id} value={patient.id}>
                                 {patient.lastName}, {patient.firstName} (Né le: {patient.dob ? format(new Date(patient.dob), 'dd/MM/yyyy', { locale: fr }) : 'N/A'})
+                                {patient.service && ` - ${patient.service}`}
                               </SelectItem>
                             ))
                           )}
@@ -846,6 +849,7 @@ function NewMedicalRecordTabContent() {
                   patientsForSelect.map(patient => (
                     <SelectItem key={patient.id} value={patient.id}>
                       {patient.lastName}, {patient.firstName} (Né le: {patient.dob ? format(new Date(patient.dob), 'dd/MM/yyyy', { locale: fr }) : 'N/A'})
+                      {patient.service && ` - ${patient.service}`}
                     </SelectItem>
                   ))
                 )}

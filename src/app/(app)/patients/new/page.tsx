@@ -10,20 +10,35 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, HeartPulse } from "lucide-react"; // Added HeartPulse for service
 import { toast } from "sonner";
 import { db } from "@/lib/firebase"; // Import Firestore instance
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useState } from "react";
 
+const servicesList = [
+  { value: "Cardiologie", label: "Cardiologie" },
+  { value: "Dermatologie", label: "Dermatologie" },
+  { value: "Gynécologie", label: "Gynécologie" },
+  { value: "Neurologie", label: "Neurologie" },
+  { value: "Ophtalmologie", label: "Ophtalmologie" },
+  { value: "Pédiatrie", label: "Pédiatrie" },
+  { value: "Psychiatrie", label: "Psychiatrie" },
+  { value: "Radiologie", label: "Radiologie" },
+  { value: "Médecine Générale", label: "Médecine Générale" },
+  { value: "Autre", label: "Autre" },
+];
+
 const patientFormSchema = z.object({
   lastName: z.string().min(2, { message: "Le nom doit contenir au moins 2 caractères." }),
   firstName: z.string().min(2, { message: "Le prénom doit contenir au moins 2 caractères." }),
   dob: z.date({ required_error: "La date de naissance est requise." }),
+  service: z.string({ required_error: "Veuillez sélectionner un service." }),
   phone: z.string().optional(),
-  email: z.string().email({ message: "Adresse e-mail invalide." }).optional(),
+  email: z.string().email({ message: "Adresse e-mail invalide." }).optional().or(z.literal('')),
 });
 
 type PatientFormValues = z.infer<typeof patientFormSchema>;
@@ -36,6 +51,7 @@ export default function NewPatientPage() {
     defaultValues: {
       lastName: "",
       firstName: "",
+      service: undefined,
       phone: "",
       email: "",
     },
@@ -47,7 +63,7 @@ export default function NewPatientPage() {
       // Prepare data for Firestore
       const patientData = {
         ...data,
-        dob: format(data.dob, "yyyy-MM-dd"), // Store DOB as a string or Timestamp
+        dob: format(data.dob, "yyyy-MM-dd"), // Store DOB as a string
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
@@ -55,7 +71,7 @@ export default function NewPatientPage() {
       const docRef = await addDoc(collection(db, "patients"), patientData);
       console.log("Patient enregistré avec ID: ", docRef.id);
       toast.success("Patient enregistré avec succès!", {
-        description: `ID: ${docRef.id} - Nom: ${data.firstName} ${data.lastName}`,
+        description: `ID: ${docRef.id} - Nom: ${data.firstName} ${data.lastName} - Service: ${data.service}`,
       });
       form.reset(); // Reset form after successful submission
     } catch (error) {
@@ -124,7 +140,7 @@ export default function NewPatientPage() {
                             disabled={isSubmitting}
                           >
                             {field.value ? (
-                              format(field.value, "PPP") // PPP for locale-specific format e.g., "Nov 27, 2024"
+                              format(field.value, "PPP", { locale: form.watch('dob') ? (await import('date-fns/locale/fr')).fr : undefined })
                             ) : (
                               <span>Choisir une date</span>
                             )}
@@ -144,6 +160,30 @@ export default function NewPatientPage() {
                         />
                       </PopoverContent>
                     </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="service"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Service Médical</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner un service" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {servicesList.map(service => (
+                          <SelectItem key={service.value} value={service.value}>
+                            {service.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
