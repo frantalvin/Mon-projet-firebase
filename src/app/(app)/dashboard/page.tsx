@@ -20,8 +20,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal, BrainCircuit, Users, CalendarDays, LineChartIcon, ShieldCheck, PlusCircle, Eye, Search, FileText, CalendarIcon as LucideCalendarIcon, Loader2, AlertTriangle, Users2, CreditCard, DollarSign } from "lucide-react";
 import Link from 'next/link';
 import { db } from "@/lib/firebase";
-import { collection, getDocs, query, orderBy, Timestamp, doc, getDoc, addDoc, serverTimestamp } from "firebase/firestore";
-import { format } from 'date-fns';
+import { collection, getDocs, query, orderBy, Timestamp, doc, getDoc, addDoc, serverTimestamp, where } from "firebase/firestore";
+import { format, startOfDay, endOfDay, isSameDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -52,17 +52,42 @@ function DashboardTabContent() {
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [activePatients, setActivePatients] = useState<number | null>(null);
   const [appointmentsToday, setAppointmentsToday] = useState<number | null>(null);
+  const [isLoadingDashboardStats, setIsLoadingDashboardStats] = useState(true);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
+      setIsLoadingDashboardStats(true);
       try {
+        // Fetch active patients
         const patientsSnapshot = await getDocs(collection(db, "patients"));
         setActivePatients(patientsSnapshot.size);
-        // Placeholder for appointments today
-        setAppointmentsToday(5); 
+
+        // Fetch appointments for today
+        const todayStart = startOfDay(new Date());
+        const todayEnd = endOfDay(new Date());
+
+        const appointmentsQuery = query(
+          collection(db, "appointments"),
+          where("dateTime", ">=", Timestamp.fromDate(todayStart)),
+          where("dateTime", "<=", Timestamp.fromDate(todayEnd))
+        );
+        const appointmentsSnapshot = await getDocs(appointmentsQuery);
+        
+        let countToday = 0;
+        appointmentsSnapshot.forEach(doc => {
+          const appointmentData = doc.data();
+          // Double check with client-side date conversion if needed, though Firestore query should be accurate
+          if (appointmentData.dateTime && isSameDay(appointmentData.dateTime.toDate(), new Date())) {
+            countToday++;
+          }
+        });
+        setAppointmentsToday(countToday);
 
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
+        // Optionally set error states for individual cards
+      } finally {
+        setIsLoadingDashboardStats(false);
       }
     };
     fetchDashboardData();
@@ -109,16 +134,16 @@ function DashboardTabContent() {
             <CardDescription>Nombre total de patients enregistrés.</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-4xl font-bold">{activePatients !== null ? activePatients : "Chargement..."}</p>
+            <p className="text-4xl font-bold">{isLoadingDashboardStats ? <Loader2 className="h-8 w-8 animate-spin" /> : activePatients !== null ? activePatients : "N/A"}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
             <CardTitle>Rendez-vous du Jour</CardTitle>
-            <CardDescription>Nombre de rendez-vous prévus aujourd'hui (donnée exemple).</CardDescription>
+            <CardDescription>Nombre de rendez-vous prévus aujourd'hui.</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-4xl font-bold">{appointmentsToday !== null ? appointmentsToday : "Chargement..."}</p>
+            <p className="text-4xl font-bold">{isLoadingDashboardStats ? <Loader2 className="h-8 w-8 animate-spin" /> : appointmentsToday !== null ? appointmentsToday : "N/A"}</p>
           </CardContent>
         </Card>
          <Card className="lg:col-span-1">
