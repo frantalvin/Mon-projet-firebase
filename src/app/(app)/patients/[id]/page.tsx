@@ -4,13 +4,15 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BrainCircuit, FileText, Printer, Terminal, AlertTriangle, Loader2, Eye, ArrowLeft, HeartPulse } from "lucide-react"; // Removed PlusCircle, Added HeartPulse
+import { BrainCircuit, FileText, Printer, Terminal, AlertTriangle, Loader2, Eye, ArrowLeft, HeartPulse, Sparkles } from "lucide-react"; 
 import { use, useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { analyzeEmergencyCase, type EmergencyCaseAnalysis } from "@/ai/flows/emergency-flow";
+import { summarizePatientHistory, type PatientSummaryOutput } from "@/ai/flows/summarize-patient-history-flow"; // Added
 import { toast } from "sonner";
 import { Alert, AlertTitle, AlertDescription as UiAlertDescription } from "@/components/ui/alert";
+import { Textarea } from "@/components/ui/textarea"; // Added for summary display
 import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, orderBy, getDocs, Timestamp } from "firebase/firestore";
 import { format } from 'date-fns';
@@ -39,7 +41,7 @@ interface MedicalRecordFirestoreData {
   symptomes?: string;
   traitementPrescrit?: string;
   notesMedecin?: string;
-  issueConsultation?: string; // Champ ajouté
+  issueConsultation?: string; 
   createdAt?: Timestamp;
   doctorName?: string;
   doctorSpecialty?: string;
@@ -69,7 +71,7 @@ interface HealthReportData {
   }[];
   conseils: string;
   prochainRendezVous?: string;
-  issueConsultation?: string; // Champ ajouté
+  issueConsultation?: string; 
 }
 
 function HealthReportDialog({ reportData, open, onOpenChange }: { reportData: HealthReportData | null, open: boolean, onOpenChange: (open: boolean) => void }) {
@@ -215,6 +217,46 @@ function AiAnalysisDialog({ analysis, error, open, onOpenChange, isLoading }: { 
   );
 }
 
+function PatientSummaryDialog({ summary, error, open, onOpenChange, isLoading }: { summary: string | null, error: string | null, open: boolean, onOpenChange: (open: boolean) => void, isLoading: boolean }) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Résumé IA de l'Historique Patient</DialogTitle>
+          <DialogDescription>
+            Synthèse de l'historique médical du patient générée par IA.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-4 space-y-3">
+          {isLoading && <p className="text-muted-foreground text-center"><Loader2 className="mr-2 h-4 w-4 animate-spin inline" />Génération du résumé en cours...</p>}
+          {error && !isLoading && (
+            <Alert variant="destructive" className="whitespace-pre-wrap">
+              <Terminal className="h-4 w-4" />
+              <AlertTitle>Erreur de Génération du Résumé</AlertTitle>
+              <UiAlertDescription>{error}</UiAlertDescription>
+            </Alert>
+          )}
+          {summary && !isLoading &&(
+            <ScrollArea className="max-h-[50vh] p-1">
+              <Textarea
+                value={summary}
+                readOnly
+                className="w-full min-h-[200px] text-sm bg-muted/30"
+                rows={10}
+              />
+            </ScrollArea>
+          )}
+          {!summary && !error && !isLoading && <p className="text-muted-foreground">Aucun résumé disponible.</p>}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Fermer</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
 // Correspond à `consultationOutcomes` dans dashboard/page.tsx
 const consultationOutcomeLabels: { [key: string]: string } = {
   "En cours": "En cours de traitement",
@@ -248,6 +290,12 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
   const [isAnalyzingPatientEmergency, setIsAnalyzingPatientEmergency] = useState(false);
   const [patientEmergencyAnalysis, setPatientEmergencyAnalysis] = useState<EmergencyCaseAnalysis | null>(null);
   const [patientEmergencyError, setPatientEmergencyError] = useState<string | null>(null);
+
+  const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [patientSummary, setPatientSummary] = useState<string | null>(null);
+  const [patientSummaryError, setPatientSummaryError] = useState<string | null>(null);
+
 
   useEffect(() => {
     console.log('[PatientDetailPage] useEffect triggered. patientId for fetching:', patientId);
@@ -364,6 +412,41 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
       setIsAnalyzingPatientEmergency(false);
     }
   };
+
+  const handleGenerateSummary = async () => {
+    if (!patientId) {
+      toast.error("ID du patient non disponible pour générer le résumé.");
+      return;
+    }
+    console.log('[PatientDetailPage] handleGenerateSummary called for patientId:', patientId);
+    setIsGeneratingSummary(true);
+    setPatientSummary(null);
+    setPatientSummaryError(null);
+    setIsSummaryDialogOpen(true);
+
+    try {
+      toast.info("Génération du résumé IA en cours...");
+      const result: PatientSummaryOutput = await summarizePatientHistory({ patientId });
+      setPatientSummary(result.summary);
+      toast.success("Résumé IA généré avec succès.");
+    } catch (error: any) {
+      console.error("[PatientDetailPage] Error generating patient summary:", error);
+      let userFriendlyMessage = "Une erreur inconnue est survenue lors de la génération du résumé.";
+       if (error instanceof Error || (error && typeof error.message === 'string')) {
+        if (error.message.includes("NOT_FOUND") && error.message.includes("Model")) {
+          userFriendlyMessage = `Le modèle d'IA (${(error.message.match(/Model '(.*)' not found/) || [])[1] || 'inconnu'}) n'est pas accessible.\nConseils:\n1. Vérifiez votre GOOGLE_API_KEY.\n2. Assurez-vous que l'API AI est activée.`;
+        } else if (error.message.includes("PERMISSION_DENIED") || error.message.includes("API key not valid")) {
+          userFriendlyMessage = "Permission refusée par le service IA ou clé API invalide.";
+        } else {
+          userFriendlyMessage = error.message;
+        }
+      }
+      setPatientSummaryError(`Erreur de génération du résumé : ${userFriendlyMessage}`);
+      toast.error("Erreur lors de la génération du résumé.", { description: userFriendlyMessage });
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  };
   
   const mockHealthReportData: HealthReportData | null = patient ? {
     patientInfo: {
@@ -459,7 +542,7 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
           <CardHeader>
             <CardTitle>Actions Rapides</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+          <CardContent className="flex flex-col sm:flex-row flex-wrap gap-2">
             <Button onClick={handleOpenReportDialog} variant="outline" className="w-full sm:w-auto" disabled={!patient}>
               <FileText className="mr-2 h-5 w-5" />
               Formulaire de Santé
@@ -471,7 +554,16 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
               className="w-full sm:w-auto"
             >
               <BrainCircuit className="mr-2 h-5 w-5" />
-              {isAnalyzingPatientEmergency ? "Analyse IA en cours..." : "Évaluer Urgence (IA)"}
+              {isAnalyzingPatientEmergency ? "Analyse Urgence..." : "Évaluer Urgence (IA)"}
+            </Button>
+            <Button
+              onClick={handleGenerateSummary}
+              variant="secondary"
+              disabled={isGeneratingSummary || !patientId}
+              className="w-full sm:w-auto"
+            >
+              <Sparkles className="mr-2 h-5 w-5" />
+              {isGeneratingSummary ? "Résumé IA en cours..." : "Générer Résumé IA"}
             </Button>
           </CardContent>
         </Card>
@@ -524,6 +616,14 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
         open={isAiAnalysisDialogOpen}
         onOpenChange={setIsAiAnalysisDialogOpen}
         isLoading={isAnalyzingPatientEmergency}
+      />
+
+      <PatientSummaryDialog
+        summary={patientSummary}
+        error={patientSummaryError}
+        open={isSummaryDialogOpen}
+        onOpenChange={setIsSummaryDialogOpen}
+        isLoading={isGeneratingSummary}
       />
     </div>
   );
