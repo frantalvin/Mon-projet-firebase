@@ -45,7 +45,7 @@ export function Navigation() {
     { query: 'appointments', label: 'Rendez-vous', icon: CalendarDays },
     { query: 'new-medical-record', label: 'Nouv. Dossier', icon: PlusCircle },
     { query: 'staff', label: 'Personnel', icon: Users2 },
-    // { query: 'statistics', label: 'Statistiques', icon: LineChart }, 
+    { query: 'statistics', label: 'Statistiques', icon: LineChart }, 
     // { query: 'admin', label: 'Admin', icon: ShieldCheck },
   ];
 
