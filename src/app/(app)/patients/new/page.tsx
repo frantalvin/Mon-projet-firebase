@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { fr } from 'date-fns/locale'; // Import fr statically
 import { CalendarIcon, HeartPulse } from "lucide-react"; // Added HeartPulse for service
 import { toast } from "sonner";
 import { db } from "@/lib/firebase"; // Import Firestore instance
@@ -140,7 +141,7 @@ export default function NewPatientPage() {
                             disabled={isSubmitting}
                           >
                             {field.value ? (
-                              format(field.value, "PPP", { locale: form.watch('dob') ? (await import('date-fns/locale/fr')).fr : undefined })
+                              format(field.value, "PPP", { locale: fr }) // Use statically imported fr
                             ) : (
                               <span>Choisir une date</span>
                             )}
