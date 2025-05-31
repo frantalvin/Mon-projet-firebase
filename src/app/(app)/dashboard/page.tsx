@@ -251,7 +251,7 @@ interface AppointmentData {
   patientName: string; 
   doctorName: string; 
   dateTime: Timestamp; 
-  status: 'Prévu' | 'Terminé' | 'Annulé' | string; 
+  status: 'Prévu' | 'Terminé' | 'Annulé' | 'Absent' | string; // Ajout du statut 'Absent'
   reason?: string;
 }
 
@@ -323,7 +323,7 @@ function AppointmentsTabContent() {
       setIsLoading(false);
        console.log("[AppointmentsTabContent] Fin de la récupération des rendez-vous.");
     }
-  }, []); // useCallback dependencies
+  }, []); 
 
   useEffect(() => {
     fetchAppointments();
@@ -331,7 +331,7 @@ function AppointmentsTabContent() {
 
   useEffect(() => {
     const fetchPatientsForSelect = async () => {
-      if (!isAddAppointmentDialogOpen) return; // Only fetch if dialog is open or about to open
+      if (!isAddAppointmentDialogOpen) return; 
       setIsLoadingPatientsForSelect(true);
       try {
         const patientsCollectionRef = collection(db, "patients");
@@ -374,7 +374,7 @@ function AppointmentsTabContent() {
         doctorName: data.doctorName,
         dateTime: Timestamp.fromDate(appointmentDateTime),
         reason: data.reason || "",
-        status: "Prévu", // Default status
+        status: "Prévu", 
         createdAt: serverTimestamp(),
       };
 
@@ -382,7 +382,7 @@ function AppointmentsTabContent() {
       toast.success("Rendez-vous planifié avec succès !");
       appointmentForm.reset();
       setIsAddAppointmentDialogOpen(false);
-      fetchAppointments(); // Refresh the list
+      fetchAppointments(); 
     } catch (error: any) {
       console.error("Erreur lors de la planification du rendez-vous :", error);
       toast.error("Erreur lors de la planification du rendez-vous.", {
@@ -392,6 +392,14 @@ function AppointmentsTabContent() {
       setIsSubmittingAppointment(false);
     }
   }
+
+  const getStatusClassForList = (status: string) => {
+    if (status === 'Terminé') return 'bg-green-100 text-green-700 dark:bg-green-700/30 dark:text-green-300';
+    if (status === 'Annulé') return 'bg-red-100 text-red-700 dark:bg-red-700/30 dark:text-red-300';
+    if (status === 'Prévu') return 'bg-blue-100 text-blue-700 dark:bg-blue-700/30 dark:text-blue-300';
+    if (status === 'Absent') return 'bg-orange-100 text-orange-700 dark:bg-orange-700/30 dark:text-orange-300';
+    return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-700/30 dark:text-yellow-300'; // Default/Unknown
+  };
 
 
   return (
@@ -489,7 +497,7 @@ function AppointmentsTabContent() {
                             mode="single"
                             selected={field.value}
                             onSelect={field.onChange}
-                            disabled={(date) => date < new Date(new Date().setHours(0,0,0,0)) || isSubmittingAppointment} // Prevent past dates
+                            disabled={(date) => date < new Date(new Date().setHours(0,0,0,0)) || isSubmittingAppointment} 
                             initialFocus
                           />
                         </PopoverContent>
@@ -599,12 +607,7 @@ function AppointmentsTabContent() {
                       </td>
                       <td className="px-6 py-4">{rdv.doctorName}</td>
                       <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          rdv.status === 'Prévu' ? 'bg-primary/20 text-primary' :
-                          rdv.status === 'Terminé' ? 'bg-accent/20 text-accent-foreground dark:text-accent' : 
-                          rdv.status === 'Annulé' ? 'bg-destructive/20 text-destructive' : 
-                          'bg-muted text-muted-foreground'
-                        }`}>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusClassForList(rdv.status)}`}>
                           {rdv.status}
                         </span>
                       </td>

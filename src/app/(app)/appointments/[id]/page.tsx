@@ -2,15 +2,16 @@
 'use client';
 
 import { use, useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Alert, AlertTitle, AlertDescription as UiAlertDescription } from "@/components/ui/alert";
 import { Button } from '@/components/ui/button';
 import { db } from "@/lib/firebase";
-import { doc, getDoc, Timestamp } from "firebase/firestore";
+import { doc, getDoc, Timestamp, updateDoc } from "firebase/firestore";
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { ArrowLeft, CalendarClock, User, Stethoscope, FileTextIcon, CheckCircle2, XCircle, AlertCircle, Loader2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, CalendarClock, User, Stethoscope, FileTextIcon, CheckCircle2, XCircle, AlertCircle, Loader2, AlertTriangle, UserX } from "lucide-react";
 import Link from 'next/link';
+import { toast } from "sonner";
 
 interface AppointmentDetailsData {
   id: string;
@@ -19,7 +20,7 @@ interface AppointmentDetailsData {
   doctorName: string;
   dateTime: Timestamp;
   reason?: string;
-  status: 'Prévu' | 'Terminé' | 'Annulé' | string;
+  status: 'Prévu' | 'Terminé' | 'Annulé' | 'Absent' | string; // Ajout du statut 'Absent'
   createdAt?: Timestamp;
 }
 
@@ -30,6 +31,7 @@ export default function AppointmentDetailPage({ params: paramsProp }: { params: 
   const [appointment, setAppointment] = useState<AppointmentDetailsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   useEffect(() => {
     if (!appointmentId) {
@@ -60,6 +62,22 @@ export default function AppointmentDetailPage({ params: paramsProp }: { params: 
 
     fetchAppointmentDetails();
   }, [appointmentId]);
+
+  const handleUpdateStatus = async (newStatus: AppointmentDetailsData['status']) => {
+    if (!appointment) return;
+    setIsUpdatingStatus(true);
+    try {
+      const appointmentDocRef = doc(db, "appointments", appointment.id);
+      await updateDoc(appointmentDocRef, { status: newStatus });
+      setAppointment(prev => prev ? { ...prev, status: newStatus } : null);
+      toast.success(`Statut du rendez-vous mis à jour à "${newStatus}".`);
+    } catch (err: any) {
+      console.error("Error updating appointment status:", err);
+      toast.error(`Erreur lors de la mise à jour du statut : ${err.message}`);
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -110,6 +128,7 @@ export default function AppointmentDetailPage({ params: paramsProp }: { params: 
     if (status === 'Terminé') return <CheckCircle2 className="h-5 w-5 text-green-500 mr-2" />;
     if (status === 'Annulé') return <XCircle className="h-5 w-5 text-red-500 mr-2" />;
     if (status === 'Prévu') return <CalendarClock className="h-5 w-5 text-blue-500 mr-2" />;
+    if (status === 'Absent') return <UserX className="h-5 w-5 text-orange-500 mr-2" />; // Nouvelle icône pour 'Absent'
     return <AlertCircle className="h-5 w-5 text-yellow-500 mr-2" />;
   };
   
@@ -117,6 +136,7 @@ export default function AppointmentDetailPage({ params: paramsProp }: { params: 
     if (status === 'Terminé') return 'text-green-700 bg-green-100 dark:text-green-300 dark:bg-green-700/30';
     if (status === 'Annulé') return 'text-red-700 bg-red-100 dark:text-red-300 dark:bg-red-700/30';
     if (status === 'Prévu') return 'text-blue-700 bg-blue-100 dark:text-blue-300 dark:bg-blue-700/30';
+    if (status === 'Absent') return 'text-orange-700 bg-orange-100 dark:text-orange-300 dark:bg-orange-700/30'; // Nouvelle classe pour 'Absent'
     return 'text-yellow-700 bg-yellow-100 dark:text-yellow-300 dark:bg-yellow-700/30';
   };
 
@@ -170,8 +190,47 @@ export default function AppointmentDetailPage({ params: paramsProp }: { params: 
             </p>
           )}
         </CardContent>
+        <CardFooter className="flex flex-col sm:flex-row sm:justify-start gap-2 border-t pt-4">
+            {appointment.status === 'Prévu' && (
+              <>
+                <Button 
+                  onClick={() => handleUpdateStatus('Terminé')} 
+                  disabled={isUpdatingStatus}
+                  variant="default"
+                  size="sm"
+                >
+                  {isUpdatingStatus ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+                  Marquer comme Terminé
+                </Button>
+                <Button 
+                  onClick={() => handleUpdateStatus('Absent')} 
+                  disabled={isUpdatingStatus}
+                  variant="outline"
+                  size="sm"
+                  className="text-orange-600 border-orange-600 hover:bg-orange-50 hover:text-orange-700 dark:text-orange-400 dark:border-orange-500 dark:hover:bg-orange-900/30 dark:hover:text-orange-300"
+                >
+                  {isUpdatingStatus ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserX className="mr-2 h-4 w-4" />}
+                  Marquer comme Absent
+                </Button>
+              </>
+            )}
+            {appointment.status !== 'Annulé' && appointment.status !== 'Terminé' && (
+                 <Button 
+                    onClick={() => handleUpdateStatus('Annulé')} 
+                    disabled={isUpdatingStatus}
+                    variant="destructive"
+                    size="sm"
+                 >
+                   {isUpdatingStatus ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <XCircle className="mr-2 h-4 w-4" />}
+                   Annuler le RDV
+                 </Button>
+            )}
+            { (appointment.status === 'Annulé' || appointment.status === 'Terminé' || appointment.status === 'Absent') && (
+                <p className="text-sm text-muted-foreground">Le statut de ce rendez-vous ne peut plus être modifié.</p>
+            )}
+        </CardFooter>
       </Card>
-      {/* Possibilité d'ajouter des actions : Modifier le statut, Annuler, etc. */}
     </div>
   );
 }
+
