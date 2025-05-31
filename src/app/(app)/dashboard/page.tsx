@@ -1346,6 +1346,11 @@ interface AgeGroupStat {
   count: number;
 }
 
+interface ServiceStat {
+  service: string;
+  count: number;
+}
+
 function StatisticsTabContent() {
   const [diseaseData, setDiseaseData] = useState<DiseaseData[]>([]);
   const [isLoadingDiseaseStats, setIsLoadingDiseaseStats] = useState(true);
@@ -1354,6 +1359,11 @@ function StatisticsTabContent() {
   const [ageGroupData, setAgeGroupData] = useState<AgeGroupStat[]>([]);
   const [isLoadingAgeStats, setIsLoadingAgeStats] = useState(true);
   const [fetchErrorAgeStats, setFetchErrorAgeStats] = useState<string | null>(null);
+
+  const [serviceDistributionData, setServiceDistributionData] = useState<ServiceStat[]>([]);
+  const [isLoadingServiceStats, setIsLoadingServiceStats] = useState(true);
+  const [fetchErrorServiceStats, setFetchErrorServiceStats] = useState<string | null>(null);
+
 
   const calculateAge = (dobString: string): number => {
     const birthDate = new Date(dobString);
@@ -1396,7 +1406,7 @@ function StatisticsTabContent() {
       const chartData = Object.entries(counts)
         .map(([name, count]) => ({ name, count }))
         .sort((a, b) => b.count - a.count)
-        .slice(0, 10); // Display top 10 for clarity
+        .slice(0, 10); 
       
       setDiseaseData(chartData);
 
@@ -1463,11 +1473,57 @@ function StatisticsTabContent() {
     }
   }, []);
 
+  const fetchServiceDistributionStats = useCallback(async () => {
+    setIsLoadingServiceStats(true);
+    setFetchErrorServiceStats(null);
+    try {
+      const patientsSnapshot = await getDocs(collection(db, "patients"));
+      const medicalRecordsSnapshot = await getDocs(collection(db, "dossiersMedicaux"));
+
+      const patientServiceMap = new Map<string, string | undefined>();
+      patientsSnapshot.forEach(doc => {
+        const patientData = doc.data() as PatientData;
+        patientServiceMap.set(doc.id, patientData.service);
+      });
+
+      const consultedPatientIds = new Set<string>();
+      medicalRecordsSnapshot.forEach(doc => {
+        const recordData = doc.data();
+        if (recordData.patientId) {
+          consultedPatientIds.add(recordData.patientId);
+        }
+      });
+
+      const serviceCounts: { [key: string]: number } = {};
+      consultedPatientIds.forEach(patientId => {
+        const service = patientServiceMap.get(patientId) || "Non spécifié";
+        serviceCounts[service] = (serviceCounts[service] || 0) + 1;
+      });
+      
+      const serviceChartData = Object.entries(serviceCounts)
+        .map(([service, count]) => ({ service, count }))
+        .sort((a, b) => b.count - a.count);
+
+      setServiceDistributionData(serviceChartData);
+
+    } catch (error: any) {
+      console.error("Erreur lors de la récupération des statistiques par service :", error);
+      let errorMessage = `Impossible de charger les statistiques par service. ${error.message || "Erreur inconnue."}`;
+       if (error.code === 'permission-denied') {
+          errorMessage += " Veuillez vérifier vos règles de sécurité Firestore.";
+      }
+      setFetchErrorServiceStats(errorMessage);
+    } finally {
+      setIsLoadingServiceStats(false);
+    }
+  }, []);
+
 
   useEffect(() => {
     fetchDiseaseStats();
     fetchAgeStats();
-  }, [fetchDiseaseStats, fetchAgeStats]);
+    fetchServiceDistributionStats();
+  }, [fetchDiseaseStats, fetchAgeStats, fetchServiceDistributionStats]);
 
   return (
     <div className="space-y-6">
@@ -1498,10 +1554,10 @@ function StatisticsTabContent() {
           )}
           {!isLoadingDiseaseStats && !fetchErrorDiseaseStats && diseaseData.length > 0 && (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={diseaseData} layout="vertical" margin={{ right: 30, left: 20 }}>
+              <BarChart data={diseaseData} layout="vertical" margin={{ right: 30, left: 20, bottom: 5, top: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" allowDecimals={false}/>
-                <YAxis dataKey="name" type="category" width={150} />
+                <YAxis dataKey="name" type="category" width={150} interval={0} />
                 <Tooltip />
                 <Legend />
                 <Bar dataKey="count" fill="hsl(var(--primary))" name="Nombre de cas" barSize={20} />
@@ -1544,6 +1600,45 @@ function StatisticsTabContent() {
                 <Tooltip />
                 <Legend />
                 <Bar dataKey="count" fill="hsl(var(--accent))" name="Nombre de Patients" />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Répartition des Patients Ayant Consulté par Service Médical</CardTitle>
+          <CardDescription>Distribution des patients (avec dossier médical) par service.</CardDescription>
+        </CardHeader>
+        <CardContent className="h-[400px] w-full">
+          {isLoadingServiceStats && (
+            <div className="flex justify-center items-center h-full">
+              <Loader2 className="mr-2 h-8 w-8 animate-spin text-primary" />
+              <p>Chargement des statistiques par service...</p>
+            </div>
+          )}
+          {!isLoadingServiceStats && fetchErrorServiceStats && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Erreur de chargement</AlertTitle>
+              <AlertDescription>{fetchErrorServiceStats}</AlertDescription>
+            </Alert>
+          )}
+          {!isLoadingServiceStats && !fetchErrorServiceStats && serviceDistributionData.length === 0 && (
+            <p className="text-muted-foreground text-center py-8">
+              Aucune donnée de consultation ou de patient avec service trouvée.
+            </p>
+          )}
+          {!isLoadingServiceStats && !fetchErrorServiceStats && serviceDistributionData.length > 0 && (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={serviceDistributionData} layout="vertical" margin={{ right: 30, left: 20, bottom: 5, top: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" allowDecimals={false}/>
+                <YAxis dataKey="service" type="category" width={150} interval={0} />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="count" fill="hsl(var(--secondary))" name="Nombre de Patients" barSize={20} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -1648,4 +1743,5 @@ export default function DashboardPage() {
     
 
     
+
 
