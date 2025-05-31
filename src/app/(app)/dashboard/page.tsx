@@ -1351,6 +1351,11 @@ interface ServiceStat {
   count: number;
 }
 
+interface AppointmentStatusStat {
+  status: string;
+  count: number;
+}
+
 function StatisticsTabContent() {
   const [diseaseData, setDiseaseData] = useState<DiseaseData[]>([]);
   const [isLoadingDiseaseStats, setIsLoadingDiseaseStats] = useState(true);
@@ -1363,6 +1368,10 @@ function StatisticsTabContent() {
   const [serviceDistributionData, setServiceDistributionData] = useState<ServiceStat[]>([]);
   const [isLoadingServiceStats, setIsLoadingServiceStats] = useState(true);
   const [fetchErrorServiceStats, setFetchErrorServiceStats] = useState<string | null>(null);
+
+  const [appointmentStatusData, setAppointmentStatusData] = useState<AppointmentStatusStat[]>([]);
+  const [isLoadingAppointmentStatusStats, setIsLoadingAppointmentStatusStats] = useState(true);
+  const [fetchErrorAppointmentStatusStats, setFetchErrorAppointmentStatusStats] = useState<string | null>(null);
 
 
   const calculateAge = (dobString: string): number => {
@@ -1518,12 +1527,59 @@ function StatisticsTabContent() {
     }
   }, []);
 
+  const fetchAppointmentStatusStats = useCallback(async () => {
+    setIsLoadingAppointmentStatusStats(true);
+    setFetchErrorAppointmentStatusStats(null);
+    try {
+      const appointmentsSnapshot = await getDocs(collection(db, "appointments"));
+      const statusCounts: { [key: string]: number } = {
+        'Prévu': 0,
+        'Terminé': 0,
+        'Annulé': 0,
+        'Absent': 0,
+      };
+      let otherStatusCount = 0;
+
+      appointmentsSnapshot.forEach((doc) => {
+        const data = doc.data();
+        const status = data.status;
+        if (status && typeof status === 'string') {
+          if (statusCounts.hasOwnProperty(status)) {
+            statusCounts[status]++;
+          } else {
+            otherStatusCount++; // Compter les statuts inconnus ou non standard
+          }
+        }
+      });
+      
+      const chartData: AppointmentStatusStat[] = Object.entries(statusCounts)
+        .map(([status, count]) => ({ status, count }));
+      
+      if (otherStatusCount > 0) {
+        chartData.push({ status: 'Autre/Inconnu', count: otherStatusCount });
+      }
+      
+      setAppointmentStatusData(chartData.filter(d => d.count > 0)); // Afficher seulement les statuts avec des comptes
+
+    } catch (error: any) {
+      console.error("Erreur lors de la récupération des statistiques de statut des RDV :", error);
+      let errorMessage = `Impossible de charger les statistiques des RDV par statut. ${error.message || "Erreur inconnue."}`;
+      if (error.code === 'permission-denied') {
+          errorMessage += " Veuillez vérifier vos règles de sécurité Firestore pour 'appointments'.";
+      }
+      setFetchErrorAppointmentStatusStats(errorMessage);
+    } finally {
+      setIsLoadingAppointmentStatusStats(false);
+    }
+  }, []);
+
 
   useEffect(() => {
     fetchDiseaseStats();
     fetchAgeStats();
     fetchServiceDistributionStats();
-  }, [fetchDiseaseStats, fetchAgeStats, fetchServiceDistributionStats]);
+    fetchAppointmentStatusStats();
+  }, [fetchDiseaseStats, fetchAgeStats, fetchServiceDistributionStats, fetchAppointmentStatusStats]);
 
   return (
     <div className="space-y-6">
@@ -1644,6 +1700,62 @@ function StatisticsTabContent() {
           )}
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Répartition des Rendez-vous par Statut</CardTitle>
+          <CardDescription>Distribution des rendez-vous selon leur statut actuel.</CardDescription>
+        </CardHeader>
+        <CardContent className="h-[400px] w-full">
+          {isLoadingAppointmentStatusStats && (
+            <div className="flex justify-center items-center h-full">
+              <Loader2 className="mr-2 h-8 w-8 animate-spin text-primary" />
+              <p>Chargement des statistiques des statuts de RDV...</p>
+            </div>
+          )}
+          {!isLoadingAppointmentStatusStats && fetchErrorAppointmentStatusStats && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Erreur de chargement</AlertTitle>
+              <AlertDescription>{fetchErrorAppointmentStatusStats}</AlertDescription>
+            </Alert>
+          )}
+          {!isLoadingAppointmentStatusStats && !fetchErrorAppointmentStatusStats && appointmentStatusData.length === 0 && (
+            <p className="text-muted-foreground text-center py-8">
+              Aucune donnée de rendez-vous trouvée pour générer les statistiques par statut.
+            </p>
+          )}
+          {!isLoadingAppointmentStatusStats && !fetchErrorAppointmentStatusStats && appointmentStatusData.length > 0 && (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={appointmentStatusData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="status" />
+                <YAxis allowDecimals={false} />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="count" name="Nombre de RDV">
+                  {appointmentStatusData.map((entry, index) => {
+                    let color = "hsl(var(--muted))"; // Default
+                    if (entry.status === 'Prévu') color = "hsl(var(--primary))";
+                    else if (entry.status === 'Terminé') color = "hsl(var(--accent))";
+                    else if (entry.status === 'Annulé') color = "hsl(var(--destructive))";
+                    else if (entry.status === 'Absent') color = "hsl(var(--secondary-foreground))"; // Orange-like (secondary-foreground is dark, maybe not ideal)
+                                                                                              // Let's use a defined orange-ish color from the palette if possible or a specific HSL
+                                                                                              // For 'Absent', let's use secondary which is a light gray for theme, or chart.3
+                                                                                              // Using chart colors: chart.1 (primary), chart.2 (accent), chart.4 (destructive), chart.3 (secondary for Absent)
+                    if (entry.status === 'Prévu') color = "hsl(var(--primary))"; // Corresponds to chart.1
+                    else if (entry.status === 'Terminé') color = "hsl(var(--accent))"; // Corresponds to chart.2
+                    else if (entry.status === 'Annulé') color = "hsl(var(--destructive))"; // Corresponds to chart.4
+                    else if (entry.status === 'Absent') color = "hsl(var(--secondary))"; // Corresponds to chart.3 (light gray)
+                    
+                    return <Bar key={`bar-${index}`} dataKey="count" fill={color} />;
+                  })}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
       
       <Card>
           <CardHeader>
@@ -1656,8 +1768,8 @@ function StatisticsTabContent() {
             </p>
             <ul className="list-disc list-inside text-muted-foreground text-sm space-y-1 mt-2">
                 <li>Cas de guérison vs. Cas de décès (nécessite un champ "résultat" dans les dossiers médicaux)</li>
-                <li>Statistiques sur les types de rendez-vous (nouveaux, suivi, urgence)</li>
-                <li>Taux de rendez-vous manqués</li>
+                <li>Statistiques sur les types de rendez-vous (nouveaux, suivi, urgence) - *nécessite d'ajouter un champ "type" aux RDV*</li>
+                <li>Taux de rendez-vous manqués (déjà implicite avec "Absent")</li>
             </ul>
           </CardContent>
         </Card>
@@ -1743,5 +1855,6 @@ export default function DashboardPage() {
     
 
     
+
 
 
