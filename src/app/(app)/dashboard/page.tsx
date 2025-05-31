@@ -12,12 +12,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from "@/components/ui/dialog";
-import { ResponsiveContainer, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Bar } from 'recharts';
+import { ResponsiveContainer, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Bar, Cell } from 'recharts';
 import { useState, useEffect, Suspense, useMemo, useCallback } from "react";
 import type { EmergencyCaseAnalysis } from "@/ai/flows/emergency-flow";
 import { analyzeEmergencyCase } from "@/ai/flows/emergency-flow";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, BrainCircuit, Users, CalendarDays, LineChartIcon, ShieldCheck, PlusCircle, Eye, Search, FileText, CalendarIcon as LucideCalendarIcon, Loader2, AlertTriangle, Users2, CreditCard, DollarSign, HeartPulse, Activity } from "lucide-react";
+import { Terminal, BrainCircuit, Users, CalendarDays, LineChartIcon, ShieldCheck, PlusCircle, Eye, Search, FileText, CalendarIcon as LucideCalendarIcon, Loader2, AlertTriangle, Users2, CreditCard, DollarSign, HeartPulse, Activity, Lock } from "lucide-react";
 import Link from 'next/link';
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, orderBy, Timestamp, doc, getDoc, addDoc, serverTimestamp, where } from "firebase/firestore";
@@ -1396,6 +1396,7 @@ interface ServiceStat {
 interface AppointmentStatusStat {
   status: string;
   count: number;
+  fill: string;
 }
 
 interface OutcomeStat {
@@ -1604,14 +1605,24 @@ function StatisticsTabContent() {
         }
       });
       
-      const chartData: AppointmentStatusStat[] = Object.entries(statusCounts)
+      const chartData: Omit<AppointmentStatusStat, 'fill'>[] = Object.entries(statusCounts)
         .map(([status, count]) => ({ status, count }));
       
       if (otherStatusCount > 0) {
         chartData.push({ status: 'Autre/Inconnu', count: otherStatusCount });
       }
+
+      // Assign colors based on status for the chart
+      const coloredChartData = chartData.map(item => {
+        let fill = 'hsl(var(--muted))'; // Default color
+        if (item.status === 'Prévu') fill = 'hsl(var(--primary))';
+        else if (item.status === 'Terminé') fill = 'hsl(var(--accent))';
+        else if (item.status === 'Annulé') fill = 'hsl(var(--destructive))';
+        else if (item.status === 'Absent') fill = 'hsl(var(--secondary))'; // Using secondary for Absent
+        return { ...item, fill };
+      });
       
-      setAppointmentStatusData(chartData.filter(d => d.count > 0));
+      setAppointmentStatusData(coloredChartData.filter(d => d.count > 0));
 
     } catch (error: any) {
       console.error("Erreur lors de la récupération des statistiques de statut des RDV :", error);
@@ -1633,7 +1644,7 @@ function StatisticsTabContent() {
       const querySnapshot = await getDocs(medicalRecordsRef);
       
       const counts: { [key: string]: number } = {};
-      consultationOutcomes.forEach(o => counts[o.value] = 0); // Initialize all possible outcomes with 0
+      consultationOutcomes.forEach(o => counts[o.value] = 0); 
 
       querySnapshot.forEach((doc) => {
         const data = doc.data();
@@ -1642,19 +1653,21 @@ function StatisticsTabContent() {
           if (counts.hasOwnProperty(outcome)) {
             counts[outcome]++;
           } else {
-            counts["Autre"] = (counts["Autre"] || 0) + 1; // If outcome not in predefined list, count as "Autre"
+            // If outcome from DB is not in our predefined list, still count it under its own name.
+            // Or, decide to group under "Autre" if that's preferred. For now, count separately.
+            counts[outcome] = (counts[outcome] || 0) + 1;
           }
         }
       });
 
       const chartData = Object.entries(counts)
         .map(([outcome, count]) => ({ outcome, count }))
-        .filter(item => item.count > 0 || consultationOutcomes.some(o => o.value === item.outcome)) // Keep if count > 0 or is a predefined outcome
+        .filter(item => item.count > 0 || consultationOutcomes.some(o => o.value === item.outcome)) 
         .sort((a, b) => b.count - a.count); 
       
       setConsultationOutcomeData(chartData);
 
-    } catch (error: any) {
+    } catch (error: any) => {
       console.error("Erreur lors de la récupération des statistiques d'issue de consultation :", error);
       let errorMessage = `Impossible de charger les statistiques d'issue. ${error.message || "Erreur inconnue."}`;
       if (error.code === 'permission-denied') {
@@ -1828,50 +1841,10 @@ function StatisticsTabContent() {
                 <Tooltip />
                 <Legend />
                 <Bar dataKey="count" name="Nombre de RDV">
-                  {appointmentStatusData.map((entry, index) => {
-                    let color = "hsl(var(--muted))"; 
-                    if (entry.status === 'Prévu') color = "hsl(var(--primary))";
-                    else if (entry.status === 'Terminé') color = "hsl(var(--accent))";
-                    else if (entry.status === 'Annulé') color = "hsl(var(--destructive))";
-                    else if (entry.status === 'Absent') color = "hsl(var(--secondary))"; 
-                    
-                    // Use a unique key for each Bar component if they are rendered in a loop
-                    // However, Recharts typically expects one Bar component with a dataKey.
-                    // For multiple colors in a single Bar based on data, this approach isn't standard.
-                    // A better way would be to use the `fill` prop with a function or an array of colors if supported,
-                    // or define multiple <Bar> components if you need separate legend entries/behaviors.
-                    // For simplicity, we'll keep one Bar and use a single color or iterate through colors.
-                    // The current implementation of coloring individual bars within a single <Bar> component
-                    // based on entry data isn't directly supported by simply returning multiple <Bar> components here.
-                    // Recharts <Bar> component expects `Cell` components for individual bar coloring.
-                    // This was a misinterpretation of how to color bars.
-                    // Let's revert to a single color for this bar or use cells if complex coloring is needed.
-                    // For now, one primary color for the bar.
-                    // The previous mapping was incorrect. For coloring bars within a single <Bar> component, use <Cell>.
-                    // As this is getting complex, we will use a single fill for now.
-                    // We can refine bar colors later if needed.
-                    return <Bar key={`bar-${index}`} fill={color} />; // This is not how Recharts colors individual bars.
-                                                                   // Correct approach is using <Cell> components as children of <Bar>
-                                                                   // Or, if the Bar component itself is iterated, that's different.
-                                                                   // The current structure implies a single Bar component.
-                                                                   // Reverting to a single fill for simplicity for now.
-                  })}
+                   {appointmentStatusData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
                 </Bar>
-                 {/* Correct way for individual bar colors (if data structure supports it or using Cell)
-                  <Bar dataKey="count" name="Nombre de RDV">
-                    {appointmentStatusData.map((entry, index) => {
-                      let color;
-                      if (entry.status === 'Prévu') color = "hsl(var(--primary))";
-                      else if (entry.status === 'Terminé') color = "hsl(var(--accent))";
-                      else if (entry.status === 'Annulé') color = "hsl(var(--destructive))";
-                      else if (entry.status === 'Absent') color = "hsl(var(--secondary))";
-                      else color = "hsl(var(--muted))";
-                      return <Cell key={`cell-${index}`} fill={color} />;
-                    })}
-                  </Bar>
-                  This will be implemented later if needed. For now, default color for the bar.
-                  Using a single <Bar dataKey="count" fill="hsl(var(--chart-1))" name="Nombre de RDV" /> for now.
-                */}
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -1907,17 +1880,18 @@ function StatisticsTabContent() {
               <BarChart data={consultationOutcomeData} layout="vertical" margin={{ right: 30, left: 30, bottom: 5, top: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" allowDecimals={false} />
-                <YAxis dataKey="outcome" type="category" width={150} interval={0} />
+                <YAxis 
+                  dataKey="outcome" 
+                  type="category" 
+                  width={150} 
+                  interval={0} 
+                  tickFormatter={(value) => consultationOutcomes.find(o => o.value === value)?.label || value}
+                />
                 <Tooltip formatter={(value, name, props) => {
                     const outcomeLabel = consultationOutcomes.find(o => o.value === props.payload.outcome)?.label || props.payload.outcome;
                     return [value, outcomeLabel];
                 }} />
-                <Legend formatter={(value, entry) => {
-                    const outcomeLabel = consultationOutcomes.find(o => o.value === entry.dataKey)?.label || entry.dataKey;
-                    // This legend formatter might be tricky with how Bar component works.
-                    // Simpler: Use the 'name' prop in Bar for the legend item label.
-                    return "Nombre de cas"; 
-                }}/>
+                <Legend formatter={() => "Nombre de cas"}/>
                 <Bar dataKey="count" fill="hsl(var(--chart-5))" name="Nombre de cas" barSize={20} />
               </BarChart>
             </ResponsiveContainer>
@@ -1931,21 +1905,82 @@ function StatisticsTabContent() {
 function AdminTabContent() {
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-semibold">Gestion des Comptes</h1>
-      <p className="mt-2">
-        Cette section est réservée à l'administration des comptes utilisateurs (médecins, infirmiers, etc.).
-      </p>
-      <div className="mt-6 p-4 border rounded-lg bg-muted/30">
-        <h2 className="font-semibold text-lg mb-2">Fonctionnalités prévues :</h2>
-        <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-          <li>Gérer les rôles (médecin, infirmier, admin)</li>
-          <li>Activer/désactiver un compte</li>
-          <li>Visualiser tous les utilisateurs</li>
-        </ul>
-        <p className="mt-4 text-sm text-destructive">
-          Attention : Ces fonctionnalités sont en cours de développement et ne sont pas encore actives.
-        </p>
+      <div className="flex items-center space-x-3 mb-6">
+        <Lock className="h-8 w-8 text-primary" />
+        <h1 className="text-3xl font-semibold">Administration et Sécurité</h1>
       </div>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Gestion des Comptes Utilisateurs</CardTitle>
+          <CardDescription>Contrôle des accès et des rôles des utilisateurs de l'application.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-muted-foreground">
+            Cette section est destinée aux administrateurs pour gérer les comptes du personnel (médecins, infirmiers, secrétaires, etc.).
+            Actuellement, l'authentification est gérée par Firebase, mais la gestion fine des rôles et permissions n'est pas encore implémentée.
+          </p>
+          <div className="p-4 border rounded-lg bg-muted/30 space-y-2">
+            <h3 className="font-semibold text-md">Fonctionnalités Prévues :</h3>
+            <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+              <li>Création et assignation de rôles (ex: Administrateur, Médecin, Personnel Soignant).</li>
+              <li>Invitation de nouveaux utilisateurs avec des rôles spécifiques.</li>
+              <li>Activation/désactivation de comptes utilisateurs.</li>
+              <li>Visualisation de la liste des utilisateurs et de leurs rôles.</li>
+              <li>Réinitialisation des mots de passe (si les permissions le permettent).</li>
+            </ul>
+          </div>
+           <Alert>
+            <Terminal className="h-4 w-4" />
+            <AlertTitle>En Développement</AlertTitle>
+            <AlertDescription>
+              Ces fonctionnalités avancées de gestion des comptes sont en cours de conception et seront implémentées progressivement.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Sécurité des Données</CardTitle>
+          <CardDescription>Principes et mesures pour la protection des informations sensibles.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-muted-foreground">
+            La sécurité des données médicales est primordiale. L'application s'appuie sur les services Firebase (Authentication et Firestore)
+            qui offrent des mécanismes de sécurité robustes.
+          </p>
+          <h3 className="font-semibold text-md">Aspects Clés :</h3>
+          <ul className="list-disc list-inside space-y-2 text-sm">
+            <li>
+              <strong>Authentification :</strong> Gérée par Firebase Authentication, assurant que seuls les utilisateurs enregistrés et connectés peuvent accéder à l'application.
+            </li>
+            <li>
+              <strong>Règles de Sécurité Firestore :</strong>
+              <span className="block text-muted-foreground">
+                Essentielles pour contrôler l'accès en lecture et en écriture aux données. 
+                <strong> Les règles actuelles sont probablement permissives pour le développement. Elles devront être rigoureusement renforcées avant toute utilisation en production</strong> pour garantir que les utilisateurs ne peuvent accéder qu'aux données autorisées par leur rôle.
+              </span>
+            </li>
+            <li>
+              <strong>Chiffrement :</strong> Firebase chiffre les données en transit (HTTPS) et au repos.
+            </li>
+            <li>
+              <strong>Journalisation et Audit (Futur) :</strong> Pour une application en production, des mécanismes de journalisation des accès et des modifications importantes seraient nécessaires.
+            </li>
+            <li>
+              <strong>Sauvegardes :</strong> Firestore offre des fonctionnalités de sauvegarde et de restauration.
+            </li>
+          </ul>
+           <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Action Requise Avant Production</AlertTitle>
+            <AlertDescription>
+              La configuration et le test approfondi des Règles de Sécurité Firestore sont une étape critique avant de considérer cette application pour un usage réel avec des données sensibles.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -2006,6 +2041,7 @@ export default function DashboardPage() {
     
 
     
+
 
 
 
