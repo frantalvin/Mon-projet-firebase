@@ -1667,7 +1667,7 @@ function StatisticsTabContent() {
       
       setConsultationOutcomeData(chartData);
 
-    } catch (error: any) => {
+    } catch (error: any) {
       console.error("Erreur lors de la récupération des statistiques d'issue de consultation :", error);
       let errorMessage = `Impossible de charger les statistiques d'issue. ${error.message || "Erreur inconnue."}`;
       if (error.code === 'permission-denied') {
@@ -2041,6 +2041,8 @@ export default function DashboardPage() {
     
 
     
+
+
 
 
 
