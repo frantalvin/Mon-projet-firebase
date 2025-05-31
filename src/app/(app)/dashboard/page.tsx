@@ -1176,8 +1176,8 @@ function StaffTabContent() {
                       <td className="px-6 py-4">{staff.email || "N/A"}</td>
                       <td className="px-6 py-4">{staff.phone || "N/A"}</td>
                       <td className="px-6 py-4">
-                        <Button variant="outline" size="sm" onClick={() => toast.info("Fonctionnalité de détails à implémenter.")}>
-                          <Eye className="mr-2 h-4 w-4" />Détails
+                        <Button variant="outline" size="sm" asChild>
+                           <Link href={`/staff/${staff.id}`}><Eye className="mr-2 h-4 w-4" />Détails</Link>
                         </Button>
                       </td>
                     </tr>
@@ -1299,4 +1299,6 @@ export default function DashboardPage() {
     </Suspense>
   );
 }
+    
+
     
