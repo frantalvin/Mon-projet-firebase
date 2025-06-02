@@ -17,13 +17,13 @@ import { doc, getDoc, collection, query, where, orderBy, getDocs, Timestamp } fr
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
-// Input Schema for the flow - NOT EXPORTED
+// Input Schema for the flow
 const PatientIdInputSchema = z.object({
   patientId: z.string().min(1, { message: "L'ID du patient ne peut pas être vide." }),
 });
 export type PatientIdInput = z.infer<typeof PatientIdInputSchema>;
 
-// Output Schema for the flow - NOT EXPORTED
+// Output Schema for the flow
 const PatientSummaryOutputSchema = z.object({
   summary: z.string().describe("Un résumé concis de l'historique médical et de l'état actuel du patient."),
 });
@@ -56,7 +56,7 @@ const PatientHistoryPromptInputSchema = z.object({
 // Define the Genkit Prompt
 const patientSummaryPrompt = ai.definePrompt({
   name: 'patientSummaryPrompt',
-  model: 'gemini-pro', 
+  model: 'gemini-2.0-flash', // Updated to gemini-2.0-flash
   input: { schema: PatientHistoryPromptInputSchema },
   output: { schema: PatientSummaryOutputSchema },
   prompt: `Vous êtes un assistant médical IA chargé de résumer l'historique médical d'un patient pour un professionnel de santé. Soyez concis, précis et utilisez un langage médical approprié mais compréhensible. Le résumé doit être en français.
@@ -161,4 +161,3 @@ export async function summarizePatientHistory(input: PatientIdInput): Promise<Pa
   }
   return summarizePatientHistoryFlow(validationResult.data);
 }
-

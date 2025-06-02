@@ -52,7 +52,7 @@ export async function analyzeEmergencyCase(input: EmergencyCaseInput): Promise<E
 // Define the Genkit Prompt for emergency analysis
 const emergencyPrompt = ai.definePrompt({
   name: 'emergencyAnalysisPrompt',
-  model: 'gemini-pro', // Using standard 'gemini-pro' for baseline testing
+  model: 'gemini-2.0-flash', // Updated to gemini-2.0-flash
   input: { schema: EmergencyCaseInputSchema },
   output: { schema: EmergencyCaseAnalysisSchema },
   prompt: `Vous êtes un assistant IA pour une clinique médicale, spécialisé dans la priorisation des cas d'urgence.
@@ -76,7 +76,7 @@ const emergencyCaseAnalysisFlow = ai.defineFlow(
     
     // Log the model name being used by the prompt
     // The model name is taken from the emergencyPrompt definition
-    const modelNameToUse = (emergencyPrompt as any).config?.model?.name || 'gemini-pro'; // Attempt to get model name, default if not found
+    const modelNameToUse = (emergencyPrompt as any).config?.model?.name || 'gemini-2.0-flash'; // Attempt to get model name, default if not found
     console.log(`[emergency-flow.ts] emergencyCaseAnalysisFlow: Attempting to call emergencyPrompt configured with model: '${modelNameToUse}'`);
 
     const { output, usage } = await emergencyPrompt(input); 
