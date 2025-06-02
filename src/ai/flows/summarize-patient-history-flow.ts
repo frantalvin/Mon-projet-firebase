@@ -56,7 +56,7 @@ const PatientHistoryPromptInputSchema = z.object({
 // Define the Genkit Prompt
 const patientSummaryPrompt = ai.definePrompt({
   name: 'patientSummaryPrompt',
-  model: 'gemini-2.0-flash', // Updated to gemini-2.0-flash
+  model: 'gemini-1.5-flash', // Updated to gemini-1.5-flash
   input: { schema: PatientHistoryPromptInputSchema },
   output: { schema: PatientSummaryOutputSchema },
   prompt: `Vous êtes un assistant médical IA chargé de résumer l'historique médical d'un patient pour un professionnel de santé. Soyez concis, précis et utilisez un langage médical approprié mais compréhensible. Le résumé doit être en français.
