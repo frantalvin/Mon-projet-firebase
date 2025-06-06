@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react'; // 'use' a été retiré car plus nécessaire ici
+import { use, useState, useEffect } from 'react'; // 'use' a été ré-ajouté
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Alert, AlertTitle, AlertDescription as UiAlertDescription } from "@/components/ui/alert";
 import { Button } from '@/components/ui/button';
@@ -32,9 +32,10 @@ interface AppointmentDetailsData {
   paymentMethod?: string;
 }
 
-// La signature de la fonction a été modifiée ici, et l'utilisation de `use(paramsProp)` a été retirée.
-export default function AppointmentDetailPage({ params }: { params: { id: string } }) {
-  const appointmentId = params.id; // Accès direct à l'ID depuis les params
+// La signature de la fonction accepte paramsProp, qui est une Promise
+export default function AppointmentDetailPage({ params: paramsProp }: { params: { id: string } }) {
+  const resolvedParams = use(paramsProp); // Utilisation de use() pour résoudre la Promise
+  const appointmentId = resolvedParams.id; // Accès à l'ID depuis les params résolus
 
   const [appointment, setAppointment] = useState<AppointmentDetailsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
