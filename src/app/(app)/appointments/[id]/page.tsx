@@ -32,11 +32,9 @@ interface AppointmentDetailsData {
   paymentMethod?: string;
 }
 
-// La signature de la fonction est corrigée :
-// La prop 'params' est directement la Promise.
+// Corrected function signature: params is a Promise
 export default function AppointmentDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  // 'params' ici est la Promise passée par Next.js
-  const resolvedParams = use(params);
+  const resolvedParams = use(params); // Use 'use' to resolve the Promise
   const appointmentId = resolvedParams.id;
 
   const [appointment, setAppointment] = useState<AppointmentDetailsData | null>(null);
