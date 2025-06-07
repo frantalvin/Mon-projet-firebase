@@ -24,7 +24,7 @@ interface AppointmentDetailsData {
   doctorName: string;
   dateTime: Timestamp;
   reason?: string;
-  status: 'Prévu' | 'Terminé' | 'Annulé' | 'Absent' | string; 
+  status: 'Prévu' | 'Terminé' | 'Annulé' | 'Absent' | string;
   createdAt?: Timestamp;
   consultationFee?: number;
   paymentStatus?: 'Impayé' | 'Payé';
@@ -32,10 +32,12 @@ interface AppointmentDetailsData {
   paymentMethod?: string;
 }
 
-// Correction: La propriété `params` elle-même est une Promise contenant l'objet { id: string }
+// La signature de la fonction est corrigée :
+// La prop 'params' est directement la Promise.
 export default function AppointmentDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params); // `params` est la Promise, `resolvedParams` est l'objet résolu
-  const appointmentId = resolvedParams.id; // Accès à l'ID depuis les params résolus
+  // 'params' ici est la Promise passée par Next.js
+  const resolvedParams = use(params);
+  const appointmentId = resolvedParams.id;
 
   const [appointment, setAppointment] = useState<AppointmentDetailsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -92,7 +94,7 @@ export default function AppointmentDetailPage({ params }: { params: Promise<{ id
       setIsUpdatingStatus(false);
     }
   };
-  
+
   const handleRecordPayment = async () => {
     if (!appointment || !selectedPaymentMethod) {
       toast.error("Impossible d'enregistrer le paiement. Informations manquantes.");
@@ -172,18 +174,18 @@ export default function AppointmentDetailPage({ params }: { params: Promise<{ id
     if (status === 'Terminé') return <CheckCircle2 className="h-5 w-5 text-green-500 mr-2" />;
     if (status === 'Annulé') return <XCircle className="h-5 w-5 text-red-500 mr-2" />;
     if (status === 'Prévu') return <CalendarClock className="h-5 w-5 text-blue-500 mr-2" />;
-    if (status === 'Absent') return <UserX className="h-5 w-5 text-orange-500 mr-2" />; 
+    if (status === 'Absent') return <UserX className="h-5 w-5 text-orange-500 mr-2" />;
     return <AlertCircle className="h-5 w-5 text-yellow-500 mr-2" />;
   };
-  
+
   const getStatusClass = (status: string) => {
     if (status === 'Terminé') return 'text-green-700 bg-green-100 dark:text-green-300 dark:bg-green-700/30';
     if (status === 'Annulé') return 'text-red-700 bg-red-100 dark:text-red-300 dark:bg-red-700/30';
     if (status === 'Prévu') return 'text-blue-700 bg-blue-100 dark:text-blue-300 dark:bg-blue-700/30';
-    if (status === 'Absent') return 'text-orange-700 bg-orange-100 dark:text-orange-300 dark:bg-orange-700/30'; 
+    if (status === 'Absent') return 'text-orange-700 bg-orange-100 dark:text-orange-300 dark:bg-orange-700/30';
     return 'text-yellow-700 bg-yellow-100 dark:text-yellow-300 dark:bg-yellow-700/30';
   };
-  
+
   const getPaymentStatusClass = (status?: 'Impayé' | 'Payé') => {
     if (status === 'Payé') return 'text-green-700 bg-green-100 dark:text-green-300 dark:bg-green-700/30';
     return 'text-red-700 bg-red-100 dark:text-red-300 dark:bg-red-700/30'; // Impayé or undefined
@@ -201,7 +203,7 @@ export default function AppointmentDetailPage({ params }: { params: Promise<{ id
           </Link>
         </Button>
       </div>
-      
+
       <Card>
         <CardHeader>
           <CardTitle>Rendez-vous du {format(appointment.dateTime.toDate(), 'dd MMMM yyyy \'à\' HH:mm', { locale: fr })}</CardTitle>
@@ -262,8 +264,8 @@ export default function AppointmentDetailPage({ params }: { params: Promise<{ id
         <CardFooter className="flex flex-col sm:flex-row sm:justify-start gap-2 border-t pt-4 flex-wrap">
             {appointment.status === 'Prévu' && (
               <>
-                <Button 
-                  onClick={() => handleUpdateStatus('Terminé')} 
+                <Button
+                  onClick={() => handleUpdateStatus('Terminé')}
                   disabled={isUpdatingStatus}
                   variant="default"
                   size="sm"
@@ -271,8 +273,8 @@ export default function AppointmentDetailPage({ params }: { params: Promise<{ id
                   {isUpdatingStatus ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
                   Marquer comme Terminé
                 </Button>
-                <Button 
-                  onClick={() => handleUpdateStatus('Absent')} 
+                <Button
+                  onClick={() => handleUpdateStatus('Absent')}
                   disabled={isUpdatingStatus}
                   variant="outline"
                   size="sm"
@@ -281,8 +283,8 @@ export default function AppointmentDetailPage({ params }: { params: Promise<{ id
                   {isUpdatingStatus ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserX className="mr-2 h-4 w-4" />}
                   Marquer comme Absent
                 </Button>
-                <Button 
-                    onClick={() => handleUpdateStatus('Annulé')} 
+                <Button
+                    onClick={() => handleUpdateStatus('Annulé')}
                     disabled={isUpdatingStatus}
                     variant="destructive"
                     size="sm"
@@ -292,7 +294,7 @@ export default function AppointmentDetailPage({ params }: { params: Promise<{ id
                  </Button>
               </>
             )}
-            
+
             { (appointment.status === 'Annulé' || appointment.status === 'Terminé' || appointment.status === 'Absent') && appointment.status !== 'Prévu' && (
                 <p className="text-sm text-muted-foreground w-full basis-full">Le statut de ce rendez-vous ne peut plus être modifié.</p>
             )}
@@ -317,9 +319,9 @@ export default function AppointmentDetailPage({ params }: { params: Promise<{ id
           <DialogHeader>
             <DialogTitle>Enregistrer le paiement</DialogTitle>
             <DialogDescription>
-              Confirmez les détails du paiement pour le rendez-vous de {appointment?.patientName}.
+              Confirmez les détails du paiement pour le rendez-vous de {appointment.patientName}.
               <br />
-              Montant à payer : {appointment?.consultationFee !== undefined ? `${appointment.consultationFee.toFixed(2)} €` : 'Non spécifié'}
+              Montant à payer : {appointment.consultationFee !== undefined ? `${appointment.consultationFee.toFixed(2)} €` : 'Non spécifié'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
