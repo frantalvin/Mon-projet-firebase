@@ -1,7 +1,7 @@
 
 'use client';
 
-import { use, useState, useEffect } from 'react'; // 'use' a été ré-ajouté
+import { use, useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Alert, AlertTitle, AlertDescription as UiAlertDescription } from "@/components/ui/alert";
 import { Button } from '@/components/ui/button';
@@ -32,9 +32,9 @@ interface AppointmentDetailsData {
   paymentMethod?: string;
 }
 
-// La signature de la fonction accepte paramsProp, qui est une Promise
-export default function AppointmentDetailPage({ params: paramsProp }: { params: { id: string } }) {
-  const resolvedParams = use(paramsProp); // Utilisation de use() pour résoudre la Promise
+// Correction: La propriété `params` elle-même est une Promise contenant l'objet { id: string }
+export default function AppointmentDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(params); // `params` est la Promise, `resolvedParams` est l'objet résolu
   const appointmentId = resolvedParams.id; // Accès à l'ID depuis les params résolus
 
   const [appointment, setAppointment] = useState<AppointmentDetailsData | null>(null);
@@ -317,9 +317,9 @@ export default function AppointmentDetailPage({ params: paramsProp }: { params: 
           <DialogHeader>
             <DialogTitle>Enregistrer le paiement</DialogTitle>
             <DialogDescription>
-              Confirmez les détails du paiement pour le rendez-vous de {appointment.patientName}.
+              Confirmez les détails du paiement pour le rendez-vous de {appointment?.patientName}.
               <br />
-              Montant à payer : {appointment.consultationFee !== undefined ? `${appointment.consultationFee.toFixed(2)} €` : 'Non spécifié'}
+              Montant à payer : {appointment?.consultationFee !== undefined ? `${appointment.consultationFee.toFixed(2)} €` : 'Non spécifié'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -353,3 +353,5 @@ export default function AppointmentDetailPage({ params: paramsProp }: { params: 
     </div>
   );
 }
+
+    
