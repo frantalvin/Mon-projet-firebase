@@ -1,4 +1,3 @@
-
 'use client';
 
 import { use, useState, useEffect } from 'react';
@@ -32,9 +31,8 @@ interface AppointmentDetailsData {
   paymentMethod?: string;
 }
 
-// Corrected function signature: params is a Promise
 export default function AppointmentDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params); // Use 'use' to resolve the Promise
+  const resolvedParams = use(params);
   const appointmentId = resolvedParams.id;
 
   const [appointment, setAppointment] = useState<AppointmentDetailsData | null>(null);
@@ -94,8 +92,8 @@ export default function AppointmentDetailPage({ params }: { params: Promise<{ id
   };
 
   const handleRecordPayment = async () => {
-    if (!appointment || !selectedPaymentMethod) {
-      toast.error("Impossible d'enregistrer le paiement. Informations manquantes.");
+    if (!appointment || selectedPaymentMethod === undefined) { // Vérification explicite de undefined
+      toast.error("Impossible d'enregistrer le paiement. Informations manquantes ou méthode de paiement non sélectionnée.");
       return;
     }
     setIsProcessingPayment(true);
@@ -317,9 +315,9 @@ export default function AppointmentDetailPage({ params }: { params: Promise<{ id
           <DialogHeader>
             <DialogTitle>Enregistrer le paiement</DialogTitle>
             <DialogDescription>
-              Confirmez les détails du paiement pour le rendez-vous de {appointment.patientName}.
+              Confirmez les détails du paiement pour le rendez-vous de {appointment?.patientName}.
               <br />
-              Montant à payer : {appointment.consultationFee !== undefined ? `${appointment.consultationFee.toFixed(2)} €` : 'Non spécifié'}
+              Montant à payer : {appointment?.consultationFee !== undefined ? `${appointment.consultationFee.toFixed(2)} €` : 'Non spécifié'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -336,13 +334,13 @@ export default function AppointmentDetailPage({ params }: { params: Promise<{ id
                 <SelectItem value="Autre">Autre</SelectItem>
               </SelectContent>
             </Select>
-            { !selectedPaymentMethod && <p className="text-sm text-destructive">Veuillez sélectionner une méthode de paiement.</p>}
+            { selectedPaymentMethod === undefined && <p className="text-sm text-destructive">Veuillez sélectionner une méthode de paiement.</p>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setIsPaymentDialogOpen(false); setSelectedPaymentMethod(undefined); }} disabled={isProcessingPayment}>
               Annuler
             </Button>
-            <Button onClick={handleRecordPayment} disabled={!selectedPaymentMethod || isProcessingPayment}>
+            <Button onClick={handleRecordPayment} disabled={selectedPaymentMethod === undefined || isProcessingPayment}>
               {isProcessingPayment && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Confirmer Paiement
             </Button>
@@ -353,5 +351,3 @@ export default function AppointmentDetailPage({ params }: { params: Promise<{ id
     </div>
   );
 }
-
-    
