@@ -1,3 +1,4 @@
+
 'use client';
 
 import { use, useState, useEffect } from 'react';
@@ -351,3 +352,5 @@ export default function AppointmentDetailPage({ params }: { params: Promise<{ id
     </div>
   );
 }
+
+    
