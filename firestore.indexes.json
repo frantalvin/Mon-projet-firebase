@@ -1,16 +1,6 @@
 {
   "indexes": [
     {
-      "collectionGroup": "patients",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "lastName",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
       "collectionGroup": "appointments",
       "queryScope": "COLLECTION",
       "fields": [
