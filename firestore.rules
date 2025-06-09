@@ -1,25 +1,9 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Par défaut, verrouillez l'accès à toutes les données.
-    // Adaptez ces règles à vos besoins spécifiques.
     match /{document=**} {
       allow read, write: if false;
     }
-
-    // Exemple de règles pour des collections spécifiques (à adapter)
-    // match /patients/{patientId} {
-    //   allow read: if request.auth != null;
-    //   allow write: if request.auth != null; // Soyez plus précis sur qui peut écrire
-    // }
-    // match /appointments/{appointmentId} {
-    //   allow read, write: if request.auth != null;
-    // }
-    // match /dossiersMedicaux/{recordId} {
-    //   allow read, write: if request.auth != null; // Attention à la sensibilité des données
-    // }
-    // match /staff/{staffId} {
-    //  allow read, write: if request.auth != null;
-    // }
   }
 }

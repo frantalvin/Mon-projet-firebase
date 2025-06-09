@@ -1,20 +1,4 @@
-
 {
-  "indexes": [
-    {
-      "collectionGroup": "dossiersMedicaux",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "patientId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "consultationDate",
-          "order": "DESCENDING"
-        }
-      ]
-    }
-  ],
+  "indexes": [],
   "fieldOverrides": []
 }
