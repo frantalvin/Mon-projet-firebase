@@ -1,15 +1,6 @@
+
 {
   "indexes": [
-    {
-      "collectionGroup": "appointments",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "dateTime",
-          "order": "DESCENDING"
-        }
-      ]
-    },
     {
       "collectionGroup": "dossiersMedicaux",
       "queryScope": "COLLECTION",
@@ -21,16 +12,6 @@
         {
           "fieldPath": "consultationDate",
           "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "staff",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "lastName",
-          "order": "ASCENDING"
         }
       ]
     }
