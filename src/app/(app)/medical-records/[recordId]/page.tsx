@@ -2,7 +2,7 @@
 // src/app/(app)/medical-records/[recordId]/page.tsx
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertTitle, AlertDescription as UiAlertDescription } from "@/components/ui/alert";
 import { db } from "@/lib/firebase";

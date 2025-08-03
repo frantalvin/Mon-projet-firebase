@@ -5,7 +5,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BrainCircuit, FileText, Printer, Terminal, AlertTriangle, Loader2, Eye, ArrowLeft, HeartPulse, Sparkles } from "lucide-react"; 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { analyzeEmergencyCase, type EmergencyCaseAnalysis } from "@/ai/flows/emergency-flow";
