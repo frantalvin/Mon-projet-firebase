@@ -4,7 +4,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Alert, AlertTitle, AlertDescription as UiAlertDescription } from "@/components/ui/alert";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, Timestamp } from "firebase/firestore";
 import { format } from 'date-fns';
@@ -112,7 +112,7 @@ export default function MedicalRecordDetailPage({ params }: PageProps) {
       <Alert variant="destructive" className="m-4">
         <AlertTriangle className="h-4 w-4" />
         <AlertTitle>Erreur de chargement</AlertTitle>
-        <UiAlertDescription>{error}</UiAlertDescription>
+        <AlertDescription>{error}</AlertDescription>
       </Alert>
     );
   }
@@ -122,7 +122,7 @@ export default function MedicalRecordDetailPage({ params }: PageProps) {
       <Alert variant="destructive" className="m-4">
         <AlertTriangle className="h-4 w-4" />
         <AlertTitle>Dossier Introuvable</AlertTitle>
-        <UiAlertDescription>Aucun dossier médical trouvé avec l'ID {recordId}.</UiAlertDescription>
+        <AlertDescription>Aucun dossier médical trouvé avec l'ID {recordId}.</AlertDescription>
       </Alert>
     );
   }
@@ -198,5 +198,3 @@ export default function MedicalRecordDetailPage({ params }: PageProps) {
     </div>
   );
 }
-
-    

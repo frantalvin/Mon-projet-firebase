@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Alert, AlertTitle, AlertDescription as UiAlertDescription } from "@/components/ui/alert";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Button } from '@/components/ui/button';
 import { db } from "@/lib/firebase";
 import { doc, getDoc, Timestamp, updateDoc } from "firebase/firestore";
@@ -12,7 +12,7 @@ import { fr } from 'date-fns/locale';
 import { ArrowLeft, CalendarClock, User, Stethoscope, FileTextIcon, CheckCircle2, XCircle, AlertCircle, Loader2, AlertTriangle, UserX, CreditCard, DollarSign, CheckCheck } from "lucide-react";
 import Link from 'next/link';
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription as DialogDescriptionComponent, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -60,7 +60,7 @@ export default function AppointmentDetailPage({ params }: PageProps) {
       setIsLoading(true);
       setError(null);
       try {
-        const appointmentDocRef = doc(db, "appointments", appointmentId);
+        const appointmentDocRef = doc(db, "appointments", appointmentId as string);
         const appointmentDocSnap = await getDoc(appointmentDocRef);
 
         if (appointmentDocSnap.exists()) {
@@ -146,7 +146,7 @@ export default function AppointmentDetailPage({ params }: PageProps) {
         <Alert variant="destructive" className="m-4">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Erreur de chargement</AlertTitle>
-          <UiAlertDescription>{error}</UiAlertDescription>
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
       </div>
     );
@@ -164,7 +164,7 @@ export default function AppointmentDetailPage({ params }: PageProps) {
         <Alert variant="destructive" className="m-4">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Rendez-vous Introuvable</AlertTitle>
-          <UiAlertDescription>Aucun rendez-vous trouvé avec l'ID {appointmentId}.</UiAlertDescription>
+          <AlertDescription>Aucun rendez-vous trouvé avec l'ID {appointmentId}.</AlertDescription>
         </Alert>
       </div>
     );
@@ -318,11 +318,11 @@ export default function AppointmentDetailPage({ params }: PageProps) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Enregistrer le paiement</DialogTitle>
-            <DialogDescription>
+            <DialogDescriptionComponent>
               Confirmez les détails du paiement pour le rendez-vous de {appointment?.patientName}.
               <br />
               Montant à payer : {appointment?.consultationFee !== undefined ? `${appointment.consultationFee.toFixed(2)} €` : 'Non spécifié'}
-            </DialogDescription>
+            </DialogDescriptionComponent>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <Label htmlFor="payment-method">Méthode de paiement</Label>
@@ -355,5 +355,3 @@ export default function AppointmentDetailPage({ params }: PageProps) {
     </div>
   );
 }
-
-    

@@ -11,7 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { analyzeEmergencyCase, type EmergencyCaseAnalysis } from "@/ai/flows/emergency-flow";
 import { summarizePatientHistory, type PatientSummaryOutput } from "@/ai/flows/summarize-patient-history-flow"; // Added
 import { toast } from "sonner";
-import { Alert, AlertTitle, AlertDescription as UiAlertDescription } from "@/components/ui/alert";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Textarea } from "@/components/ui/textarea"; // Added for summary display
 import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, orderBy, getDocs, Timestamp } from "firebase/firestore";
@@ -186,7 +186,7 @@ function AiAnalysisDialog({ analysis, error, open, onOpenChange, isLoading }: { 
             <Alert variant="destructive" className="whitespace-pre-wrap">
               <Terminal className="h-4 w-4" />
               <AlertTitle>Erreur d'Analyse</AlertTitle>
-              <UiAlertDescription>{error}</UiAlertDescription>
+              <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
           {analysis && !isLoading &&(
@@ -233,7 +233,7 @@ function PatientSummaryDialog({ summary, error, open, onOpenChange, isLoading }:
             <Alert variant="destructive" className="whitespace-pre-wrap">
               <Terminal className="h-4 w-4" />
               <AlertTitle>Erreur de Génération du Résumé</AlertTitle>
-              <UiAlertDescription>{error}</UiAlertDescription>
+              <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
           {summary && !isLoading &&(
@@ -475,7 +475,7 @@ export default function PatientDetailPage({ params }: PageProps) {
       <Alert variant="destructive" className="m-4">
         <AlertTriangle className="h-4 w-4" />
         <AlertTitle>Erreur de chargement</AlertTitle>
-        <UiAlertDescription>{error}</UiAlertDescription>
+        <AlertDescription>{error}</AlertDescription>
          <Button variant="outline" asChild className="mt-4">
           <Link href="/dashboard?tab=patients"><ArrowLeft className="mr-2 h-4 w-4" /> Retour à la liste des patients</Link>
         </Button>
@@ -488,7 +488,7 @@ export default function PatientDetailPage({ params }: PageProps) {
       <Alert variant="destructive" className="m-4">
         <AlertTriangle className="h-4 w-4" />
         <AlertTitle>Patient Introuvable</AlertTitle>
-        <UiAlertDescription>Aucun patient trouvé avec l'ID {patientId || "inconnu"}. Veuillez vérifier l'ID ou retourner à la liste des patients.</UiAlertDescription>
+        <AlertDescription>Aucun patient trouvé avec l'ID {patientId || "inconnu"}. Veuillez vérifier l'ID ou retourner à la liste des patients.</AlertDescription>
         <Button variant="outline" asChild className="mt-4">
           <Link href="/dashboard?tab=patients"><ArrowLeft className="mr-2 h-4 w-4" /> Retour à la liste des patients</Link>
         </Button>
@@ -617,5 +617,3 @@ export default function PatientDetailPage({ params }: PageProps) {
     </div>
   );
 }
-
-    

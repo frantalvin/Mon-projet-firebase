@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Alert, AlertTitle, AlertDescription as UiAlertDescription } from "@/components/ui/alert";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Button } from '@/components/ui/button';
 import { db } from "@/lib/firebase";
 import { doc, getDoc, Timestamp } from "firebase/firestore";
@@ -85,7 +85,7 @@ export default function StaffDetailPage({ params }: PageProps) {
         <Alert variant="destructive" className="m-4">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Erreur de chargement</AlertTitle>
-          <UiAlertDescription>{error}</UiAlertDescription>
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
       </div>
     );
@@ -103,7 +103,7 @@ export default function StaffDetailPage({ params }: PageProps) {
         <Alert variant="destructive" className="m-4">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Membre du Personnel Introuvable</AlertTitle>
-          <UiAlertDescription>Aucun membre du personnel trouvé avec l'ID {staffId}.</UiAlertDescription>
+          <AlertDescription>Aucun membre du personnel trouvé avec l'ID {staffId}.</AlertDescription>
         </Alert>
       </div>
     );
@@ -167,5 +167,3 @@ export default function StaffDetailPage({ params }: PageProps) {
     </div>
   );
 }
-
-    
