@@ -272,13 +272,9 @@ const consultationOutcomeLabels: { [key: string]: string } = {
 };
 
 
-export default function PatientDetailPage({ params: paramsProp }: { params: { id: string } }) {
-  console.log('[PatientDetailPage] Component rendering. Raw paramsProp:', paramsProp);
-  const resolvedParams = use(paramsProp); 
+export default function PatientDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(params); 
   const patientId = resolvedParams?.id;
-  console.log('[PatientDetailPage] Resolved params:', resolvedParams);
-  console.log('[PatientDetailPage] Resolved patientId for links and fetching:', patientId);
-
 
   const [patient, setPatient] = useState<PatientFirestoreData | null>(null);
   const [medicalHistory, setMedicalHistory] = useState<MedicalRecordFirestoreData[]>([]);
@@ -298,9 +294,7 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
 
 
   useEffect(() => {
-    console.log('[PatientDetailPage] useEffect triggered. patientId for fetching:', patientId);
     if (!patientId) {
-      console.warn('[PatientDetailPage] Patient ID is missing in useEffect. Cannot fetch data.');
       setError("ID du patient non fourni pour la récupération des données.");
       setIsLoading(false);
       return;
@@ -309,17 +303,14 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
     const fetchPatientData = async () => {
       setIsLoading(true);
       setError(null);
-      console.log(`[PatientDetailPage] Starting data fetch for patient ID: ${patientId}`);
       try {
         const patientDocRef = doc(db, "patients", patientId);
         const patientDocSnap = await getDoc(patientDocRef);
 
         if (patientDocSnap.exists()) {
           const fetchedPatientData = { id: patientDocSnap.id, ...patientDocSnap.data() } as PatientFirestoreData;
-          console.log("[PatientDetailPage] Patient data fetched:", fetchedPatientData);
           setPatient(fetchedPatientData);
         } else {
-          console.warn(`[PatientDetailPage] No patient found with ID: ${patientId}`);
           setError("Patient non trouvé.");
           setPatient(null);
         }
@@ -334,7 +325,6 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
         medicalHistorySnapshot.forEach((docSnap) => {
           fetchedMedicalHistory.push({ id: docSnap.id, ...docSnap.data() } as MedicalRecordFirestoreData);
         });
-        console.log("[PatientDetailPage] Medical history fetched:", fetchedMedicalHistory);
         setMedicalHistory(fetchedMedicalHistory);
 
       } catch (err: any) {
@@ -348,7 +338,6 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
         setError(errorMessage);
       } finally {
         setIsLoading(false);
-        console.log("[PatientDetailPage] Data fetching finished.");
       }
     };
 
@@ -356,7 +345,6 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
   }, [patientId]); 
   
   const handleOpenReportDialog = () => {
-    console.log('[PatientDetailPage] "Formulaire de Santé" button clicked.');
     if (!patient) {
         toast.error("Informations du patient non chargées.", { description: "Impossible de générer le formulaire sans données patient."});
         return;
@@ -365,7 +353,7 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
   };
   
   useEffect(() => {
-    console.log('[PatientDetailPage] isAnalyzingPatientEmergency state changed to:', isAnalyzingPatientEmergency);
+    // This is for debugging purposes, can be removed in production
   }, [isAnalyzingPatientEmergency]);
 
   const handleEmergencyAI = async () => {
@@ -381,7 +369,6 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
       return;
     }
 
-    console.log('[PatientDetailPage] handleEmergencyAI called with description:', symptomsDescription);
     setIsAnalyzingPatientEmergency(true);
     setPatientEmergencyAnalysis(null);
     setPatientEmergencyError(null);
@@ -418,7 +405,6 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
       toast.error("ID du patient non disponible pour générer le résumé.");
       return;
     }
-    console.log('[PatientDetailPage] handleGenerateSummary called for patientId:', patientId);
     setIsGeneratingSummary(true);
     setPatientSummary(null);
     setPatientSummaryError(null);
@@ -629,3 +615,4 @@ export default function PatientDetailPage({ params: paramsProp }: { params: { id
   );
 }
 
+    

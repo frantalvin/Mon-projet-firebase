@@ -47,8 +47,8 @@ const consultationOutcomeLabels: { [key: string]: string } = {
 };
 
 
-export default function MedicalRecordDetailPage({ params: paramsProp }: { params: { recordId: string } }) {
-  const resolvedParams = use(paramsProp);
+export default function MedicalRecordDetailPage({ params }: { params: Promise<{ recordId: string }> }) {
+  const resolvedParams = use(params);
   const recordId = resolvedParams.recordId;
 
   const [medicalRecord, setMedicalRecord] = useState<MedicalRecordData | null>(null);
@@ -196,3 +196,4 @@ export default function MedicalRecordDetailPage({ params: paramsProp }: { params
   );
 }
 
+    

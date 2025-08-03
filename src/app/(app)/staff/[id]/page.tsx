@@ -23,8 +23,8 @@ interface StaffDetailsData {
   createdAt?: Timestamp;
 }
 
-export default function StaffDetailPage({ params: paramsProp }: { params: { id: string } }) {
-  const resolvedParams = use(paramsProp); // For Suspense boundary compatibility
+export default function StaffDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(params);
   const staffId = resolvedParams.id;
 
   const [staffMember, setStaffMember] = useState<StaffDetailsData | null>(null);
