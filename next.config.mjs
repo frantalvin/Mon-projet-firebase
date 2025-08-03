@@ -1,16 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* config options here */
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'placehold.co',
-        port: '',
-        pathname: '/**',
-      },
-    ],
-  },
+  // reactStrictMode: true, // This is the default in Next.js 14 and can be omitted
 };
 
 export default nextConfig;
