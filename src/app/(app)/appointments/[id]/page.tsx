@@ -32,7 +32,11 @@ interface AppointmentDetailsData {
   paymentMethod?: string;
 }
 
-export default function AppointmentDetailPage({ params }: { params: { id: string } }) {
+interface PageProps {
+  params: { id: string };
+}
+
+export default function AppointmentDetailPage({ params }: PageProps) {
   const { id: appointmentId } = params;
 
   const [appointment, setAppointment] = useState<AppointmentDetailsData | null>(null);
@@ -351,3 +355,5 @@ export default function AppointmentDetailPage({ params }: { params: { id: string
     </div>
   );
 }
+
+    

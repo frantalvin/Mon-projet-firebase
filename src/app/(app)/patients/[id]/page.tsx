@@ -271,8 +271,12 @@ const consultationOutcomeLabels: { [key: string]: string } = {
   "Autre": "Autre",
 };
 
+interface PageProps {
+  params: { id: string };
+}
 
-export default function PatientDetailPage({ params }: { params: { id: string } }) {
+
+export default function PatientDetailPage({ params }: PageProps) {
   const { id: patientId } = params;
 
   const [patient, setPatient] = useState<PatientFirestoreData | null>(null);
@@ -613,3 +617,5 @@ export default function PatientDetailPage({ params }: { params: { id: string } }
     </div>
   );
 }
+
+    

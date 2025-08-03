@@ -46,8 +46,12 @@ const consultationOutcomeLabels: { [key: string]: string } = {
   "Autre": "Autre",
 };
 
+interface PageProps {
+  params: { recordId: string };
+}
 
-export default function MedicalRecordDetailPage({ params }: { params: { recordId: string } }) {
+
+export default function MedicalRecordDetailPage({ params }: PageProps) {
   const { recordId } = params;
 
   const [medicalRecord, setMedicalRecord] = useState<MedicalRecordData | null>(null);
@@ -194,3 +198,5 @@ export default function MedicalRecordDetailPage({ params }: { params: { recordId
     </div>
   );
 }
+
+    

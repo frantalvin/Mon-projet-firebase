@@ -23,7 +23,11 @@ interface StaffDetailsData {
   createdAt?: Timestamp;
 }
 
-export default function StaffDetailPage({ params }: { params: { id: string } }) {
+interface PageProps {
+  params: { id: string };
+}
+
+export default function StaffDetailPage({ params }: PageProps) {
   const { id: staffId } = params;
 
   const [staffMember, setStaffMember] = useState<StaffDetailsData | null>(null);
@@ -163,3 +167,5 @@ export default function StaffDetailPage({ params }: { params: { id: string } }) 
     </div>
   );
 }
+
+    
