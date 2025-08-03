@@ -1,7 +1,7 @@
 
 'use client';
 
-import { use, useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertTitle, AlertDescription as UiAlertDescription } from "@/components/ui/alert";
 import { Button } from '@/components/ui/button';
@@ -23,9 +23,8 @@ interface StaffDetailsData {
   createdAt?: Timestamp;
 }
 
-export default function StaffDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params);
-  const staffId = resolvedParams.id;
+export default function StaffDetailPage({ params }: { params: { id: string } }) {
+  const { id: staffId } = params;
 
   const [staffMember, setStaffMember] = useState<StaffDetailsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -164,5 +163,3 @@ export default function StaffDetailPage({ params }: { params: Promise<{ id: stri
     </div>
   );
 }
-
-    

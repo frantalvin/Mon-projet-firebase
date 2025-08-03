@@ -2,7 +2,7 @@
 // src/app/(app)/medical-records/[recordId]/page.tsx
 'use client';
 
-import { use, useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertTitle, AlertDescription as UiAlertDescription } from "@/components/ui/alert";
 import { db } from "@/lib/firebase";
@@ -47,9 +47,8 @@ const consultationOutcomeLabels: { [key: string]: string } = {
 };
 
 
-export default function MedicalRecordDetailPage({ params }: { params: Promise<{ recordId: string }> }) {
-  const resolvedParams = use(params);
-  const recordId = resolvedParams.recordId;
+export default function MedicalRecordDetailPage({ params }: { params: { recordId: string } }) {
+  const { recordId } = params;
 
   const [medicalRecord, setMedicalRecord] = useState<MedicalRecordData | null>(null);
   const [patientInfo, setPatientInfo] = useState<PatientInfo | null>(null);
@@ -195,5 +194,3 @@ export default function MedicalRecordDetailPage({ params }: { params: Promise<{ 
     </div>
   );
 }
-
-    

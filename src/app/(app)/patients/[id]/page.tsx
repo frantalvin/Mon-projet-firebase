@@ -5,7 +5,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BrainCircuit, FileText, Printer, Terminal, AlertTriangle, Loader2, Eye, ArrowLeft, HeartPulse, Sparkles } from "lucide-react"; 
-import { use, useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { analyzeEmergencyCase, type EmergencyCaseAnalysis } from "@/ai/flows/emergency-flow";
@@ -272,9 +272,8 @@ const consultationOutcomeLabels: { [key: string]: string } = {
 };
 
 
-export default function PatientDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params); 
-  const patientId = resolvedParams?.id;
+export default function PatientDetailPage({ params }: { params: { id: string } }) {
+  const { id: patientId } = params;
 
   const [patient, setPatient] = useState<PatientFirestoreData | null>(null);
   const [medicalHistory, setMedicalHistory] = useState<MedicalRecordFirestoreData[]>([]);
@@ -614,5 +613,3 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
     </div>
   );
 }
-
-    

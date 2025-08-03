@@ -1,7 +1,7 @@
 
 'use client';
 
-import { use, useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Alert, AlertTitle, AlertDescription as UiAlertDescription } from "@/components/ui/alert";
 import { Button } from '@/components/ui/button';
@@ -32,9 +32,8 @@ interface AppointmentDetailsData {
   paymentMethod?: string;
 }
 
-export default function AppointmentDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params);
-  const appointmentId = resolvedParams.id;
+export default function AppointmentDetailPage({ params }: { params: { id: string } }) {
+  const { id: appointmentId } = params;
 
   const [appointment, setAppointment] = useState<AppointmentDetailsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -352,5 +351,3 @@ export default function AppointmentDetailPage({ params }: { params: Promise<{ id
     </div>
   );
 }
-
-    
