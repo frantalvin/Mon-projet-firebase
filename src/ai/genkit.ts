@@ -7,7 +7,8 @@
  */
 import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
-import { GenkitError } from 'genkit/error';
+// The GenkitError is not a named export and was causing a build failure.
+// It is not used in this file, so the import has been removed.
 
 // IMPORTANT: GOOGLE_API_KEY environment variable must be set for Google AI models to work.
 // You can set this in your .env file in the root of the project:
