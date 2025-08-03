@@ -1,2 +1,2 @@
-// Ce fichier peut être supprimé. Il était utilisé pour le middleware de next-intl.
-// La configuration de l'internationalisation a été retirée pour repartir de zéro.
+// This file can be deleted. It was used for the next-intl middleware.
+// Internationalization setup has been removed to start from a clean slate.
