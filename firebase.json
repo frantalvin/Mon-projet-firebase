@@ -13,18 +13,16 @@
     "source": "dataconnect"
   },
   "hosting": {
-    "site": "patientwise-r9uq2",
-    "source": ".",
+    "public": "out",
     "ignore": [
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
     ],
-    "appAssociation": "AUTO",
     "rewrites": [
       {
         "source": "**",
-        "apphosting": "studio"
+        "destination": "/index.html"
       }
     ]
   }
