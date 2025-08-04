@@ -5,7 +5,7 @@
 @layer base {
   :root {
     --background: 210 25% 96.1%; /* Light Gray #F0F4F8 */
-    --foreground: 222.2 47.4% 11.2%; /* Default dark gray for text */
+    --foreground: 222.2 47.4% 11.2%;
 
     --card: 0 0% 100%;
     --card-foreground: 222.2 47.4% 11.2%;
@@ -13,31 +13,31 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 47.4% 11.2%;
 
-    --primary: 220 60% 30%; /* Professional Night Blue */
-    --primary-foreground: 0 0% 100%; /* White text on night blue */
+    --primary: 206 90% 68%; /* Calming Blue #64B5F6 */
+    --primary-foreground: 210 40% 98%;
 
-    --secondary: 210 40% 96.1%; /* A lighter gray or slightly different hue */
-    --secondary-foreground: 224.7 8.9% 10.4%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
 
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 125 30% 64.1%; /* Soft Green #81C784 */
-    --accent-foreground: 222.2 47.4% 11.2%; /* Dark text on soft green */
+    --accent: 125 45% 65%; /* Soft Green #81C784 */
+    --accent-foreground: 222.2 47.4% 11.2%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 220 60% 30%; /* Based on Professional Night Blue */
+    --ring: 206 90% 68%;
 
     --radius: 0.5rem;
   }
 
   .dark {
-    --background: 222.2 47.4% 11.2%; /* Standard dark background */
-    --foreground: 210 40% 98%; /* Standard light text */
+    --background: 222.2 47.4% 11.2%;
+    --foreground: 210 40% 98%;
 
     --card: 222.2 47.4% 11.2%;
     --card-foreground: 210 40% 98%;
@@ -45,8 +45,8 @@
     --popover: 222.2 47.4% 11.2%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 220 60% 30%; /* Professional Night Blue */
-    --primary-foreground: 0 0% 100%; /* White text on night blue */
+    --primary: 206 90% 68%; /* Calming Blue #64B5F6 */
+    --primary-foreground: 222.2 47.4% 11.2%;
 
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
@@ -54,15 +54,15 @@
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
 
-    --accent: 125 30% 64.1%; /* Soft Green */
-    --accent-foreground: 210 40% 98%; /* Light text on soft green for dark mode */
+    --accent: 125 30% 64.1%; /* Soft Green #81C784 */
+    --accent-foreground: 210 40% 98%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 220 60% 30%; /* Based on Professional Night Blue */
+    --ring: 206 90% 68%;
   }
 }
 
@@ -73,11 +73,5 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
-    /* Ensuring no global transitions here that could cause flickering */
-    /* transition-property: none !important; */
-  }
-  html {
-    /* Ensuring no global transitions here that could cause flickering */
-    /* transition-property: none !important; */
   }
 }
