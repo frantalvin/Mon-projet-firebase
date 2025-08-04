@@ -355,3 +355,5 @@ export default function AppointmentDetailPage({ params }: PageProps) {
     </div>
   );
 }
+
+    
