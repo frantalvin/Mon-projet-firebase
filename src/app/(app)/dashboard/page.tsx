@@ -111,7 +111,7 @@ function DashboardTabContent() {
         if (error.message.includes("NOT_FOUND") && error.message.includes("Model")) {
           userFriendlyMessage = `Le modèle d'IA spécifié (${(error.message.match(/Model '(.*)' not found/) || [])[1] || 'gemini-pro'}) n'a pas été trouvé ou n'est pas accessible.\nConseils :\n1. Vérifiez que votre GOOGLE_API_KEY dans le fichier .env est correcte, active et autorisée à utiliser les modèles Gemini.\n2. Assurez-vous que l'API "Generative Language" ou "Vertex AI" est activée dans votre projet Google Cloud.\n3. Le modèle demandé doit être disponible pour votre compte et région.`;
         } else if (error.message.includes("PERMISSION_DENIED") || error.message.includes("API key not valid")) {
-          userFriendlyMessage = "Permission refusée par le service IA ou clé API invalide. Vérifiez votre GOOGLE_API_KEY et ses droits.";
+          userFriendlyMessage = "Permission refusée par le service IA ou clé API invalide. Vérifiez votre GOOGLE_API_KEY.";
         } else if (error.message.includes("INVALID_ARGUMENT") && error.message.includes("Must supply a `model`")) {
            userFriendlyMessage = "Argument invalide : Le modèle d'IA doit être spécifié pour l'appel. Vérifiez la configuration du flux Genkit.";
         } else {
@@ -1428,14 +1428,13 @@ function StatisticsTabContent() {
 
 
   const calculateAge = (dobString: string): number => {
-    const birthDate = new Date(dobString);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
+    try {
+      const birthDate = new Date(dobString);
+      if (isNaN(birthDate.getTime())) return 0; // Invalid date
+      return differenceInYears(new Date(), birthDate);
+    } catch {
+      return 0;
     }
-    return age;
   };
 
   const getAgeGroup = (age: number): string => {
@@ -1489,32 +1488,24 @@ function StatisticsTabContent() {
     setFetchErrorAgeStats(null);
     try {
       const patientsSnapshot = await getDocs(collection(db, "patients"));
-      const medicalRecordsSnapshot = await getDocs(collection(db, "dossiersMedicaux"));
-
       const patientsMap = new Map<string, PatientData>();
       patientsSnapshot.forEach(doc => {
         patientsMap.set(doc.id, { id: doc.id, ...doc.data() } as PatientData);
       });
 
-      const consultedPatientIds = new Set<string>();
-      medicalRecordsSnapshot.forEach(doc => {
-        const recordData = doc.data();
-        if (recordData.patientId) {
-          consultedPatientIds.add(recordData.patientId);
-        }
-      });
-      
+      // Directly iterate over patients to calculate age distribution of all registered patients
       const ageCounts: { [key: string]: number } = {
         "0-10 ans": 0, "11-20 ans": 0, "21-30 ans": 0, "31-40 ans": 0,
         "41-50 ans": 0, "51-60 ans": 0, "61-70 ans": 0, "70+ ans": 0,
       };
 
-      consultedPatientIds.forEach(patientId => {
-        const patient = patientsMap.get(patientId);
-        if (patient && patient.dob) {
+      patientsMap.forEach(patient => {
+        if (patient.dob) {
           const age = calculateAge(patient.dob);
           const ageGroup = getAgeGroup(age);
-          ageCounts[ageGroup] = (ageCounts[ageGroup] || 0) + 1;
+          if(ageCounts.hasOwnProperty(ageGroup)) {
+            ageCounts[ageGroup]++;
+          }
         }
       });
 
@@ -1527,7 +1518,7 @@ function StatisticsTabContent() {
       console.error("Erreur lors de la récupération des statistiques par âge :", error);
       let errorMessage = `Impossible de charger les statistiques par âge. ${error.message || "Erreur inconnue."}`;
       if (error.code === 'permission-denied') {
-          errorMessage += " Veuillez vérifier vos règles de sécurité Firestore pour 'patients' et/ou 'dossiersMedicaux'.";
+          errorMessage += " Veuillez vérifier vos règles de sécurité Firestore pour 'patients'.";
       }
       setFetchErrorAgeStats(errorMessage);
     } finally {
@@ -1540,25 +1531,11 @@ function StatisticsTabContent() {
     setFetchErrorServiceStats(null);
     try {
       const patientsSnapshot = await getDocs(collection(db, "patients"));
-      const medicalRecordsSnapshot = await getDocs(collection(db, "dossiersMedicaux"));
+      const serviceCounts: { [key: string]: number } = {};
 
-      const patientServiceMap = new Map<string, string | undefined>();
       patientsSnapshot.forEach(doc => {
         const patientData = doc.data() as PatientData;
-        patientServiceMap.set(doc.id, patientData.service);
-      });
-
-      const consultedPatientIds = new Set<string>();
-      medicalRecordsSnapshot.forEach(doc => {
-        const recordData = doc.data();
-        if (recordData.patientId) {
-          consultedPatientIds.add(recordData.patientId);
-        }
-      });
-
-      const serviceCounts: { [key: string]: number } = {};
-      consultedPatientIds.forEach(patientId => {
-        const service = patientServiceMap.get(patientId) || "Non spécifié";
+        const service = patientData.service || "Non spécifié";
         serviceCounts[service] = (serviceCounts[service] || 0) + 1;
       });
       
@@ -1732,8 +1709,8 @@ function StatisticsTabContent() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Répartition des Patients Ayant Consulté par Tranche d'Âge</CardTitle>
-          <CardDescription>Distribution par âge des patients ayant au moins un dossier médical.</CardDescription>
+          <CardTitle>Répartition des Patients par Tranche d'Âge</CardTitle>
+          <CardDescription>Distribution par âge de tous les patients enregistrés.</CardDescription>
         </CardHeader>
         <CardContent className="h-[400px] w-full">
           {isLoadingAgeStats && (
@@ -1751,7 +1728,7 @@ function StatisticsTabContent() {
           )}
           {!isLoadingAgeStats && !fetchErrorAgeStats && ageGroupData.every(d => d.count === 0) && (
             <p className="text-muted-foreground text-center py-8">
-              Aucune donnée de consultation ou de patient trouvée pour générer les statistiques par âge.
+              Aucun patient enregistré pour générer les statistiques par âge.
             </p>
           )}
           {!isLoadingAgeStats && !fetchErrorAgeStats && !ageGroupData.every(d => d.count === 0) && (
@@ -1771,8 +1748,8 @@ function StatisticsTabContent() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Répartition des Patients Ayant Consulté par Service Médical</CardTitle>
-          <CardDescription>Distribution des patients (avec dossier médical) par service.</CardDescription>
+          <CardTitle>Répartition des Patients par Service Médical</CardTitle>
+          <CardDescription>Distribution de tous les patients enregistrés par service.</CardDescription>
         </CardHeader>
         <CardContent className="h-[400px] w-full">
           {isLoadingServiceStats && (
@@ -1790,7 +1767,7 @@ function StatisticsTabContent() {
           )}
           {!isLoadingServiceStats && !fetchErrorServiceStats && serviceDistributionData.length === 0 && (
             <p className="text-muted-foreground text-center py-8">
-              Aucune donnée de consultation ou de patient avec service trouvée.
+              Aucun patient avec un service spécifié trouvé.
             </p>
           )}
           {!isLoadingServiceStats && !fetchErrorServiceStats && serviceDistributionData.length > 0 && (
@@ -2038,3 +2015,5 @@ export default function DashboardPage() {
     </Suspense>
   );
 }
+
+    

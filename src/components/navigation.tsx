@@ -64,7 +64,10 @@ export function Navigation() {
      if (pathname.startsWith('/medical-records/new') && item.query === 'new-medical-record') {
         return true;
     }
-    return activeTab === item.query && pathname === '/dashboard';
+    if (pathname === '/dashboard') {
+        return activeTab === item.query;
+    }
+    return false;
   };
 
 
@@ -154,5 +157,4 @@ export function Navigation() {
     </>
   );
 }
-
     
