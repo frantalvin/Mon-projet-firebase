@@ -1487,42 +1487,37 @@ function StatisticsTabContent() {
     setIsLoadingAgeStats(true);
     setFetchErrorAgeStats(null);
     try {
-      const patientsSnapshot = await getDocs(collection(db, "patients"));
-      const patientsMap = new Map<string, PatientData>();
-      patientsSnapshot.forEach(doc => {
-        patientsMap.set(doc.id, { id: doc.id, ...doc.data() } as PatientData);
-      });
+        const patientsSnapshot = await getDocs(collection(db, "patients"));
+        const ageCounts: { [key: string]: number } = {
+            "0-10 ans": 0, "11-20 ans": 0, "21-30 ans": 0, "31-40 ans": 0,
+            "41-50 ans": 0, "51-60 ans": 0, "61-70 ans": 0, "70+ ans": 0,
+        };
 
-      // Directly iterate over patients to calculate age distribution of all registered patients
-      const ageCounts: { [key: string]: number } = {
-        "0-10 ans": 0, "11-20 ans": 0, "21-30 ans": 0, "31-40 ans": 0,
-        "41-50 ans": 0, "51-60 ans": 0, "61-70 ans": 0, "70+ ans": 0,
-      };
+        patientsSnapshot.forEach(doc => {
+            const patient = doc.data() as PatientData;
+            if (patient.dob) {
+                const age = calculateAge(patient.dob);
+                const ageGroup = getAgeGroup(age);
+                if (ageCounts.hasOwnProperty(ageGroup)) {
+                    ageCounts[ageGroup]++;
+                }
+            }
+        });
 
-      patientsMap.forEach(patient => {
-        if (patient.dob) {
-          const age = calculateAge(patient.dob);
-          const ageGroup = getAgeGroup(age);
-          if(ageCounts.hasOwnProperty(ageGroup)) {
-            ageCounts[ageGroup]++;
-          }
-        }
-      });
-
-      const ageChartData = Object.entries(ageCounts)
-        .map(([ageGroup, count]) => ({ ageGroup, count }));
-      
-      setAgeGroupData(ageChartData);
+        const ageChartData = Object.entries(ageCounts)
+            .map(([ageGroup, count]) => ({ ageGroup, count }));
+        
+        setAgeGroupData(ageChartData);
 
     } catch (error: any) {
-      console.error("Erreur lors de la récupération des statistiques par âge :", error);
-      let errorMessage = `Impossible de charger les statistiques par âge. ${error.message || "Erreur inconnue."}`;
-      if (error.code === 'permission-denied') {
-          errorMessage += " Veuillez vérifier vos règles de sécurité Firestore pour 'patients'.";
-      }
-      setFetchErrorAgeStats(errorMessage);
+        console.error("Erreur lors de la récupération des statistiques par âge :", error);
+        let errorMessage = `Impossible de charger les statistiques par âge. ${error.message || "Erreur inconnue."}`;
+        if (error.code === 'permission-denied') {
+            errorMessage += " Veuillez vérifier vos règles de sécurité Firestore pour 'patients'.";
+        }
+        setFetchErrorAgeStats(errorMessage);
     } finally {
-      setIsLoadingAgeStats(false);
+        setIsLoadingAgeStats(false);
     }
   }, []);
 
@@ -2015,5 +2010,3 @@ export default function DashboardPage() {
     </Suspense>
   );
 }
-
-    
