@@ -1,7 +1,5 @@
 "use client"
 
-import * as React from "react"
-
 import { Toaster as Sonner } from "sonner"
 
 type ToasterProps = React.ComponentProps<typeof Sonner>
@@ -9,8 +7,6 @@ type ToasterProps = React.ComponentProps<typeof Sonner>
 const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
-      // No hardcoded theme prop here, Sonner will adapt to the html[class="dark"]
-      // or default to system theme if class is not present.
       className="toaster group"
       toastOptions={{
         classNames: {
