@@ -295,8 +295,8 @@ export default function AppointmentDetailPage({ params }: PageProps) {
               </>
             )}
 
-            { (appointment.status === 'Annulé' || appointment.status === 'Terminé' || appointment.status === 'Absent') && appointment.status !== 'Prévu' && (
-                <p className="text-sm text-muted-foreground w-full basis-full">Le statut de ce rendez-vous ne peut plus être modifié.</p>
+            {(appointment.status === 'Annulé' || appointment.status === 'Terminé' || appointment.status === 'Absent') && (
+                 <p className="text-sm text-muted-foreground w-full basis-full">Le statut de ce rendez-vous ne peut plus être modifié.</p>
             )}
 
             {appointment.status === 'Terminé' && appointment.paymentStatus !== 'Payé' && (
