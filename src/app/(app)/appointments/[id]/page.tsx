@@ -12,7 +12,7 @@ import { fr } from 'date-fns/locale';
 import { ArrowLeft, CalendarClock, User, Stethoscope, FileTextIcon, CheckCircle2, XCircle, AlertCircle, Loader2, AlertTriangle, UserX, CreditCard, DollarSign, CheckCheck } from "lucide-react";
 import Link from 'next/link';
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription as UiDialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -45,7 +45,7 @@ export default function AppointmentDetailPage({ params }: PageProps) {
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | undefined>(undefined);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
 
@@ -96,7 +96,7 @@ export default function AppointmentDetailPage({ params }: PageProps) {
   };
 
   const handleRecordPayment = async () => {
-    if (!appointment || selectedPaymentMethod === undefined) { // Vérification explicite de undefined
+    if (!appointment || !selectedPaymentMethod) { 
       toast.error("Impossible d'enregistrer le paiement. Informations manquantes ou méthode de paiement non sélectionnée.");
       return;
     }
@@ -115,7 +115,7 @@ export default function AppointmentDetailPage({ params }: PageProps) {
       } : null);
       toast.success("Paiement enregistré avec succès !");
       setIsPaymentDialogOpen(false);
-      setSelectedPaymentMethod(undefined);
+      setSelectedPaymentMethod('');
     } catch (err: any) {
       console.error("Error recording payment:", err);
       toast.error(`Erreur lors de l'enregistrement du paiement : ${err.message}`);
@@ -318,11 +318,11 @@ export default function AppointmentDetailPage({ params }: PageProps) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Enregistrer le paiement</DialogTitle>
-            <UiDialogDescription>
+            <DialogDescription>
               Confirmez les détails du paiement pour le rendez-vous de {appointment?.patientName}.
               <br />
               Montant à payer : {appointment?.consultationFee !== undefined ? `${appointment.consultationFee.toFixed(2)} €` : 'Non spécifié'}
-            </UiDialogDescription>
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <Label htmlFor="payment-method">Méthode de paiement</Label>
@@ -338,13 +338,13 @@ export default function AppointmentDetailPage({ params }: PageProps) {
                 <SelectItem value="Autre">Autre</SelectItem>
               </SelectContent>
             </Select>
-            { selectedPaymentMethod === undefined && <p className="text-sm text-destructive">Veuillez sélectionner une méthode de paiement.</p>}
+            { !selectedPaymentMethod && <p className="text-sm text-destructive">Veuillez sélectionner une méthode de paiement.</p>}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsPaymentDialogOpen(false); setSelectedPaymentMethod(undefined); }} disabled={isProcessingPayment}>
+            <Button variant="outline" onClick={() => { setIsPaymentDialogOpen(false); setSelectedPaymentMethod(''); }} disabled={isProcessingPayment}>
               Annuler
             </Button>
-            <Button onClick={handleRecordPayment} disabled={selectedPaymentMethod === undefined || isProcessingPayment}>
+            <Button onClick={handleRecordPayment} disabled={!selectedPaymentMethod || isProcessingPayment}>
               {isProcessingPayment && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Confirmer Paiement
             </Button>
