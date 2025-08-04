@@ -12,7 +12,7 @@ import { fr } from 'date-fns/locale';
 import { ArrowLeft, CalendarClock, User, Stethoscope, FileTextIcon, CheckCircle2, XCircle, AlertCircle, Loader2, AlertTriangle, UserX, CreditCard, DollarSign, CheckCheck } from "lucide-react";
 import Link from 'next/link';
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription as DialogDescriptionComponent, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription as UiDialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -318,11 +318,11 @@ export default function AppointmentDetailPage({ params }: PageProps) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Enregistrer le paiement</DialogTitle>
-            <DialogDescriptionComponent>
+            <UiDialogDescription>
               Confirmez les détails du paiement pour le rendez-vous de {appointment?.patientName}.
               <br />
               Montant à payer : {appointment?.consultationFee !== undefined ? `${appointment.consultationFee.toFixed(2)} €` : 'Non spécifié'}
-            </DialogDescriptionComponent>
+            </UiDialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <Label htmlFor="payment-method">Méthode de paiement</Label>
@@ -355,5 +355,3 @@ export default function AppointmentDetailPage({ params }: PageProps) {
     </div>
   );
 }
-
-    
