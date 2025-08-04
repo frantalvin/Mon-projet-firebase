@@ -45,7 +45,7 @@ export default function AppointmentDetailPage({ params }: PageProps) {
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | undefined>(undefined);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
 
@@ -115,7 +115,7 @@ export default function AppointmentDetailPage({ params }: PageProps) {
       } : null);
       toast.success("Paiement enregistré avec succès !");
       setIsPaymentDialogOpen(false);
-      setSelectedPaymentMethod('');
+      setSelectedPaymentMethod(undefined);
     } catch (err: any) {
       console.error("Error recording payment:", err);
       toast.error(`Erreur lors de l'enregistrement du paiement : ${err.message}`);
@@ -341,7 +341,7 @@ export default function AppointmentDetailPage({ params }: PageProps) {
             { !selectedPaymentMethod && <p className="text-sm text-destructive">Veuillez sélectionner une méthode de paiement.</p>}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsPaymentDialogOpen(false); setSelectedPaymentMethod(''); }} disabled={isProcessingPayment}>
+            <Button variant="outline" onClick={() => { setIsPaymentDialogOpen(false); setSelectedPaymentMethod(undefined); }} disabled={isProcessingPayment}>
               Annuler
             </Button>
             <Button onClick={handleRecordPayment} disabled={!selectedPaymentMethod || isProcessingPayment}>
@@ -355,3 +355,5 @@ export default function AppointmentDetailPage({ params }: PageProps) {
     </div>
   );
 }
+
+    
