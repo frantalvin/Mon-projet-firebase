@@ -1,7 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
-  // reactStrictMode: true, // Ceci est la valeur par défaut et n'a pas besoin d'être défini explicitement
+    experimental: {
+        // Ajout de cette ligne pour corriger l'avertissement de Cross Origin lors du développement.
+        // Cela peut être nécessaire dans les futures versions de Next.js.
+        allowedDevOrigins: ["https://*.cloudworkstations.dev"],
+    }
 };
 
 export default nextConfig;
