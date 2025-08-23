@@ -1,4 +1,4 @@
-# PatientWise - Système de Gestion de Patients
+r# PatientWise - Système de Gestion de Patients
 
 Ce projet est une application web construite avec Next.js, TypeScript, et Firebase, conçue pour la gestion de patients en milieu médical.
 
