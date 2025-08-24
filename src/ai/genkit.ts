@@ -1,6 +1,6 @@
 
 /**
- * @fileOverview Initializes and configures the Genkit AI instance.
+ * @fileOverview Initializes and aiconfigures the Genkit AI instance.
  * This file sets up the core AI functionality using Genkit and the Google AI plugin.
  * It exports a configured 'ai' object that is used throughout the application
  * to define and run AI flows, prompts, and models.
@@ -14,7 +14,6 @@ import { googleAI } from '@genkit-ai/googleai';
 // You can set this in your .env file in the root of the project:
 // GOOGLE_API_KEY=your_api_key_here
 //
-// For local development, ensure the .env file is present.
 // For deployment (e.g., Firebase App Hosting), configure this environment variable
 // in your backend settings.
 
