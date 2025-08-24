@@ -220,7 +220,7 @@ export default function AppointmentDetailPage({ params }: PageProps) {
           </div>
           <div className="flex items-center">
             <CalendarClock className="h-5 w-5 text-muted-foreground mr-3" />
-            <p><strong>Date et Heure :</strong> {format(appointment.dateTime.toDate(), "eeee dd MMMM yyyy 'à' HH:mm", { locale: fr })}</p>
+            <p><strong>Date et Heure :</strong> {format(appointment.dateTime.toDate(), 'eeee dd MMMM yyyy \\'à\\' HH:mm', { locale: fr })}</p>
           </div>
           <div className="flex items-center">
             {getStatusIcon(appointment.status)}
@@ -355,3 +355,5 @@ export default function AppointmentDetailPage({ params }: PageProps) {
     </div>
   );
 }
+
+    
